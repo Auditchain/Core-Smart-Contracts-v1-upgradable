@@ -1,0 +1,55 @@
+// migrations/2_deploy_box.js
+const Members = artifacts.require('Members');
+const MembersV2 = artifacts.require('MembersV2');
+
+// import { assert } from 'chai';
+
+ 
+const { upgradeProxy, deployProxy } = require('@openzeppelin/truffle-upgrades');
+ 
+module.exports = async function (deployer, network, accounts) {
+  await deployProxy(Members, ["0x67794670742BA1E53FD04d8bA22a9b4487CE65B4", "0x67794670742BA1E53FD04d8bA22a9b4487CE65B4"], { deployer, initializer: 'initialize' });
+  // console.log("members address:", Members.address);
+
+  let members = await Members.deployed();
+
+  let admin = accounts[0];
+  // let admin = "0x67794670742BA1E53FD04d8bA22a9b4487CE65B4";
+
+  let controller = accounts[1];
+  let dataSubscriber = accounts[2];
+  let validator1 = accounts[3];
+  let validator2 = accounts[4];
+  let validator3 = accounts[5];
+  let validator4 = accounts[6];
+  let enterprise1 = accounts[7];
+  let enterprise2 = accounts[8];
+  let platformAddress = accounts[9];
+
+  let CONTROLLER_ROLE = web3.utils.keccak256("CONTROLLER_ROLE");
+  let SETTER_ROLE = web3.utils.keccak256("SETTER_ROLE");
+
+  await members.grantRole(CONTROLLER_ROLE, controller, { from: admin });
+  console.log("1. Creating new user with name [Enterprise 1] in original [Members] contract.\n");
+  let result = await members.addUser(enterprise1, "Enterprise 1", 0, { from: controller });
+  
+  let event = result.logs[0];
+  console.log("2. Testing User Name in original contract: [", event.args.name + "]\n");
+
+  console.log("3. Upgrading [Members] contract with new function to modify name.\n");
+
+  await upgradeProxy(members.address, MembersV2);
+
+  const membersV2 = await MembersV2.deployed();
+   
+  let userName = await membersV2.user(enterprise1, 0);
+  console.log("4. Testing User Name in upgraded contract before Modification: [", userName + "]\n");
+  console.log("5. Modifying User name from [Enterprise1] to [Apple Computers]:\n");
+
+
+  await membersV2.modifyName(enterprise1, "Apple Computers Mobile", 0);
+
+  userName = await membersV2.user(enterprise1, 0);
+  console.log("6. Testing User name in Upgraded contract after calling new name modification function [", userName  + "]\n");
+
+};
