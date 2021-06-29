@@ -27,7 +27,6 @@ contract Locked is AccessControlEnumerableUpgradeable {
         _;
     }
 
-
     /// @dev terminate transaction if any of the participants is locked
     /// @param _from - user initiating process
     /// @param _to  - user involved in process

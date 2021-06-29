@@ -39,15 +39,9 @@ contract AuditToken is Locked, ERC20Upgradeable,  ERC20BurnableUpgradeable{
     /// @notice An event thats emitted when a delegate account's vote balance changes
     event DelegateVotesChanged(address indexed delegate, uint previousBalance, uint newBalance);
 
-
     uint8 public constant DECIMALS = 18;
     uint256 public constant INITIAL_SUPPLY = 250000000 * (10**uint256(DECIMALS));
-    address public migrationAgent;
-    uint256 public totalMigrated;
     
-    event Migrate(address indexed from, address indexed to, uint256 value);
-    event MigrationAgentSet(address indexed migrationAgent);   
-
     /// @dev Initialize that gives an account all initial tokens.
     function initialize(address account) public {
         __ERC20_init("Auditchain", "AUDT");
@@ -66,11 +60,9 @@ contract AuditToken is Locked, ERC20Upgradeable,  ERC20BurnableUpgradeable{
         _;
     }
 
-
     function _beforeTokenTransfer(address from, address to, uint256 tokenId) internal virtual override(ERC20Upgradeable) {
         super._beforeTokenTransfer(from, to, tokenId);
     }
-
 
     /// @notice Overwrite parent implementation to add locked verification, notSelf modifiers and call to moveDelegates
     function transfer(address to, uint256 value)
@@ -93,12 +85,12 @@ contract AuditToken is Locked, ERC20Upgradeable,  ERC20BurnableUpgradeable{
          _moveDelegates(delegates[from], delegates[to], uint96(value));
         return super.transferFrom(from, to, value);
     }
-
-
-    /// @dev Function to mint tokens
-    /// @param to address to which new minted tokens are sent
-    /// @param amount of tokens to send 
-    /// @return A boolean that indicates if the operation was successful.
+     /**
+     * @notice Function to mint tokens
+     * @param to address to which new minted tokens are sent
+     * @param amount of tokens to send 
+     * @return A boolean that indicates if the operation was successful.
+     */
     function mint(address to, uint256 amount) public isMinter() returns (bool) {       
         _mint(to, amount);
         return true;
@@ -114,8 +106,6 @@ contract AuditToken is Locked, ERC20Upgradeable,  ERC20BurnableUpgradeable{
         super.burnFrom(user, amount);
     }
 
-    
-    
     /**
      * @notice Delegate votes from `msg.sender` to `delegatee`
      * @param delegatee The address to delegate votes to
@@ -123,7 +113,6 @@ contract AuditToken is Locked, ERC20Upgradeable,  ERC20BurnableUpgradeable{
     function delegate(address delegatee) public {
         return _delegate(msg.sender, delegatee);
     }
-
 
     /**
      * @notice Gets the current votes balance for `account`
@@ -238,8 +227,4 @@ contract AuditToken is Locked, ERC20Upgradeable,  ERC20BurnableUpgradeable{
         assembly { chainId := chainid() }
         return chainId;
     }
-
-    
-
-
 }
