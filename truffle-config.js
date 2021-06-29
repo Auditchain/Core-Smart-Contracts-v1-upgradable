@@ -12,14 +12,22 @@ const INFURA_KEY = process.env.INFURA_KEY
 
 console.log("Infura key:" + process.env.INFURA_KEY);
 
-// if (!MNEMONIC || !INFURA_KEY) {
+if (!MNEMONIC || !INFURA_KEY) {
 
 
-//   console.error("Please set a mnemonic and infura key...")
-//   return
-// }
+  console.error("Please set a mnemonic and infura key...")
+  return
+}
 
 module.exports = {
+
+  plugins: [
+    'truffle-plugin-verify'
+  ],
+
+  api_keys: {
+    etherscan: "SK5S23AZ5KVEZKDASHKMBZ11Z4DQ5JN5SZ"
+  },
   networks: {
     development: {
       host: "localhost",
@@ -31,16 +39,7 @@ module.exports = {
       defaultEtherBalance: 1000,
       blockTime: 3
     },
-    rinkeby: {
-      provider: function () {
-        return new HDWalletProvider(
-          MNEMONIC,
-          "https://rinkeby.infura.io/v3/" + INFURA_KEY
-        );
-      },
-      network_id: "*",
-      gas: 0x989680
-    },
+
     ropsten: {
       provider: function () {
         return new HDWalletProvider(
@@ -59,7 +58,8 @@ module.exports = {
           "https://rinkeby.infura.io/v3/" + INFURA_KEY
         );
       },
-      network_id: "*",
+      network_id: "4",
+      etherscan: "SK5S23AZ5KVEZKDASHKMBZ11Z4DQ5JN5SZ",
       gas: 10000000
 
 
@@ -98,7 +98,7 @@ module.exports = {
   settings: {
     optimizer: {
       enabled: true,
-      runs: 100
+      runs: 200
     },
  },
 
