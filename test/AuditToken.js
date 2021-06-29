@@ -4,27 +4,11 @@ const TOKEN = artifacts.require('./AuditToken.sol');
 
 import {
     ensureException,
-    duration
 } from './helpers/utils.js';
 
 import expectRevert from './helpers/expectRevert'
 
-import {
-    increaseTime,
-    takeSnapshot,
-    revertToSnapshot
-} from './helpers/time.js'
-// import { assert } from 'console';
-// import { assert } from 'console';
-
-//import should from 'should';
-
 var BigNumber = require('big-number');
-
-//var ensureException = require("./helpers/utils.js");
-//const BigNumber = require('bignumber.js');
-
-
 
 contract("ERC20 Auditchain Token", (accounts) => {
     let owner;
@@ -32,11 +16,8 @@ contract("ERC20 Auditchain Token", (accounts) => {
     let holder2;
     let holder3;
     let holder4;
-    let supply = (250000000) * 1e18;
     let transferFunds = 1000;
     let allowedAmount = 200;
-    let initialSupply = new BigNumber(250000000).mult(1e18);
-    let oneYearSupply = new BigNumber(12500000).mult(1e18);
     let token;
     let CONTROLLER_ROLE = web3.utils.keccak256("CONTROLLER_ROLE");
     let DEFAULT_ADMIN_ROLE = "0x00";
