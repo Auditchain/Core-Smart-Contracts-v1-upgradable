@@ -76,6 +76,9 @@ module.exports = async function (deployer, network, accounts) { // eslint-disabl
 
 
   await token.grantRole(MINTER_ROLE, members.address, { from: admin });
+  await token.grantRole(MINTER_ROLE, admin, { from: admin });
+  await token.mint(admin, "260000000000000000000000000");
+
   await members.addUser(enterprise1, "Enterprise 1", 0, { from: controller });
   await members.addUser(enterprise2, "Enterprise 2", 0, { from: controller });
 
