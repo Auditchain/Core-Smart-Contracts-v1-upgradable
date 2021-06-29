@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "flatten": "sol-merger './contracts/*.sol' ./flat"
   },
   "keywords": [],
   "author": "",
@@ -30,10 +31,12 @@
     "solc": "^0.8.0",
     "truffle": "^5.3.6",
     "truffle-hdwallet-provider": "^1.0.0-web3one.4",
+    "truffle-plugin-verify": "^0.5.9",
     "web3": "^1.3.0"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.1.0",
+    "@openzeppelin/contracts-ethereum-package": "^3.0.0",
     "@openzeppelin/contracts-upgradeable": "^4.1.0",
     "babel-polyfill": "^6.26.0",
     "babel-preset-env": "^1.7.0",
