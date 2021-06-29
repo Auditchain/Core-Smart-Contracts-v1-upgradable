@@ -38,15 +38,11 @@ contract AuditToken is Locked, ERC20Upgradeable,  ERC20BurnableUpgradeable{
 
     /// @notice An event thats emitted when a delegate account's vote balance changes
     event DelegateVotesChanged(address indexed delegate, uint previousBalance, uint newBalance);
-
-    uint8 public constant DECIMALS = 18;
-    uint256 public constant INITIAL_SUPPLY = 250000000 * (10**uint256(DECIMALS));
     
     /// @dev Initialize.
     function initialize(address account) public {
         __ERC20_init("Auditchain", "AUDT");
-        require(account != address(0), "AuditToken:constructor - Address can't be 0");
-        _mint(account, INITIAL_SUPPLY);      
+        require(account != address(0), "AuditToken:initialize - Address can't be 0");
         _setupRole(DEFAULT_ADMIN_ROLE, account);
     }
 
