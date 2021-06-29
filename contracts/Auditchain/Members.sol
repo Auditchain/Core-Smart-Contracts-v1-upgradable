@@ -46,6 +46,7 @@ contract Members is  AccessControlEnumerableUpgradeable {
     uint256 public recentBlockUpdated;
     uint256 public enterpriseMatch;         
     bool public initialized;
+    uint256 public minDepositDays;
      // Audit types to be used. Two types added for future expansion 
     // enum UserType {Enterprise, Validator, DataSubscriber}  
 
@@ -69,6 +70,8 @@ contract Members is  AccessControlEnumerableUpgradeable {
     event LogSubscriptionCompleted(address subscriber, uint256 numberOfSubscriptions);
     event LogUpdateRewards(uint256 rewards);
     event LogUpdateEnterpriseMatch(uint256 portion);
+    event LogUpdateMinDepositDays(uint256 minDepositDays);
+
     
     /// @dev check if caller is a controller     
     modifier isController {
@@ -101,6 +104,7 @@ contract Members is  AccessControlEnumerableUpgradeable {
         recentBlockUpdated;
         enterpriseMatch = 200;       
         initialized = true;
+        minDepositDays = 30;
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
@@ -148,6 +152,17 @@ contract Members is  AccessControlEnumerableUpgradeable {
         require(_enterpriseMatch != 0, "Members:updateEnterpriseMatch - New value for the enterprise match can't be 0");
         enterpriseMatch = _enterpriseMatch;
         emit LogUpdateEnterpriseMatch(_enterpriseMatch);
+    }
+
+    /**
+    * @dev to be called by Governance contract to update days to calculate enterprise min deposit requirements
+    * @param _minDepositDays new value of min deposit days
+    */
+    function updateMinDepositDays(uint256 _minDepositDays) public isSetter()  {
+
+        require(_minDepositDays != 0, "Members:updateMinDepositDays - New value for the min deposit days can't be 0");
+        minDepositDays = _minDepositDays;
+        emit LogUpdateMinDepositDays(_minDepositDays);
     }
 
     /**
