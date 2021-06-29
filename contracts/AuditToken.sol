@@ -42,7 +42,7 @@ contract AuditToken is Locked, ERC20Upgradeable,  ERC20BurnableUpgradeable{
     uint8 public constant DECIMALS = 18;
     uint256 public constant INITIAL_SUPPLY = 250000000 * (10**uint256(DECIMALS));
     
-    /// @dev Initialize that gives an account all initial tokens.
+    /// @dev Initialize.
     function initialize(address account) public {
         __ERC20_init("Auditchain", "AUDT");
         require(account != address(0), "AuditToken:constructor - Address can't be 0");
