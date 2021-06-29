@@ -3,10 +3,8 @@
 pragma solidity =0.8.0;
 pragma experimental ABIEncoderV2;
 
-import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20BurnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import "./MigrationAgent.sol";
 import "./Locked.sol";
 
 contract AuditToken is Locked, ERC20Upgradeable,  ERC20BurnableUpgradeable{
@@ -50,7 +48,7 @@ contract AuditToken is Locked, ERC20Upgradeable,  ERC20BurnableUpgradeable{
     event Migrate(address indexed from, address indexed to, uint256 value);
     event MigrationAgentSet(address indexed migrationAgent);   
 
-    /// @dev Initilize that gives an account all initial tokens.
+    /// @dev Initialize that gives an account all initial tokens.
     function initialize(address account) public {
         __ERC20_init("Auditchain", "AUDT");
         require(account != address(0), "AuditToken:constructor - Address can't be 0");
@@ -101,8 +99,7 @@ contract AuditToken is Locked, ERC20Upgradeable,  ERC20BurnableUpgradeable{
     /// @param to address to which new minted tokens are sent
     /// @param amount of tokens to send 
     /// @return A boolean that indicates if the operation was successful.
-    function mint(address to, uint256 amount) public isController() returns (bool) {       
-        require(to != address(0), "Token:mint - Recipient address can't be 0");        
+    function mint(address to, uint256 amount) public isMinter() returns (bool) {       
         _mint(to, amount);
         return true;
     }
@@ -127,25 +124,6 @@ contract AuditToken is Locked, ERC20Upgradeable,  ERC20BurnableUpgradeable{
         return _delegate(msg.sender, delegatee);
     }
 
-    // /**
-    //  * @notice Delegates votes from signatory to `delegatee`
-    //  * @param delegatee The address to delegate votes to
-    //  * @param nonce The contract state required to match the signature
-    //  * @param expiry The time at which to expire the signature
-    //  * @param v The recovery byte of the signature
-    //  * @param r Half of the ECDSA signature pair
-    //  * @param s Half of the ECDSA signature pair
-    //  */
-    // function delegateBySig(address delegatee, uint nonce, uint expiry, uint8 v, bytes32 r, bytes32 s) public {
-    //     bytes32 domainSeparator = keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name())), getChainId(), address(this)));
-    //     bytes32 structHash = keccak256(abi.encode(DELEGATION_TYPEHASH, delegatee, nonce, expiry));
-    //     bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
-    //     address signatory = ecrecover(digest, v, r, s);
-    //     require(signatory != address(0), "auditToken::delegateBySig: invalid signature");
-    //     require(nonce == nonces[signatory]++, "auditToken::delegateBySig: invalid nonce");
-    //     require(block.timestamp <= expiry, "auditToken::delegateBySig: signature expired");
-    //     return _delegate(signatory, delegatee);
-    // }
 
     /**
      * @notice Gets the current votes balance for `account`
