@@ -79,8 +79,9 @@ module.exports = {
           "https://mainnet.infura.io/v3/" + INFURA_KEY
         );
       },
-      gas: 4000000,
-      gasPrice: 50000000000
+      gas: 6721975,
+      gasPrice: 65000000000,
+      etherscan: "SK5S23AZ5KVEZKDASHKMBZ11Z4DQ5JN5SZ",
     },
     mocha: {
       reporter: 'eth-gas-reporter',
