@@ -2,7 +2,6 @@ const Token = artifacts.require('./AuditToken.sol');
 
 
 const ethers = require('ethers');
-const timeMachine = require('ganache-time-traveler');
 const abi = new ethers.utils.AbiCoder();
 
 const { upgradeProxy, deployProxy } = require('@openzeppelin/truffle-upgrades');
