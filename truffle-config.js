@@ -6,7 +6,9 @@ dotenv.config();
 
 
 
-const HDWalletProvider = require("truffle-hdwallet-provider");
+// const HDWalletProvider = require("truffle-hdwallet-provider");
+const HDWalletProvider = require("@truffle/hdwallet-provider");
+
 const MNEMONIC = process.env.MNEMONIC
 const INFURA_KEY = process.env.INFURA_KEY
 
@@ -63,6 +65,25 @@ module.exports = {
       gas: 10000000
 
 
+    },
+    matic: {
+      provider: () => new HDWalletProvider(MNEMONIC, "https://polygon-mumbai.infura.io/v3/5250187d69d747f392fcf1d32bbbc64a"),
+      networkCheckTimeout: 10000,
+      ChainID: 80001,
+      network_id: 80001,
+      confirmations: 1,
+      timeoutBlocks: 200,
+      skipDryRun: true,
+    },
+    polygon: {
+      provider: () => new HDWalletProvider(MNEMONIC, "https://polygon-rpc.com"),
+      networkCheckTimeout: 10000,
+      ChainID: 137,
+      network_id: 137,
+      confirmations: 1,
+      timeoutBlocks: 200,
+      skipDryRun: true,
+      gasLimit: 6706583,
     },
     coverage: {
       host: 'localhost',
