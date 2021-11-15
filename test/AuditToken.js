@@ -35,7 +35,7 @@ contract("ERC20 Auditchain Token", (accounts) => {
 
     beforeEach(async () => {
 
-        // await deployProxy(Token, [owner], { deployer, initializer: 'initialize' });;
+        // await deployProxy(Token, [owner], { deployer, initializer: 'initialize' });
         // let token = await Token.deployed();
         token = await TOKEN.new(owner);
         await token.initialize(owner);
