@@ -6,7 +6,9 @@ dotenv.config();
 
 
 
-const HDWalletProvider = require("truffle-hdwallet-provider");
+// const HDWalletProvider = require("truffle-hdwallet-provider");
+const HDWalletProvider = require("@truffle/hdwallet-provider");
+
 const MNEMONIC = process.env.MNEMONIC
 const INFURA_KEY = process.env.INFURA_KEY
 
@@ -26,7 +28,9 @@ module.exports = {
   ],
 
   api_keys: {
-    etherscan: "SK5S23AZ5KVEZKDASHKMBZ11Z4DQ5JN5SZ"
+    // etherscan: "SK5S23AZ5KVEZKDASHKMBZ11Z4DQ5JN5SZ" //ethereum
+    etherscan: "44WCPAKSWMD4VD34G4JHBGPNVY1FV52RZT" // main polygon
+    
   },
   networks: {
     development: {
@@ -63,6 +67,45 @@ module.exports = {
       gas: 10000000
 
 
+    },
+    goerli: {
+      provider: function () {
+        return new HDWalletProvider(
+          MNEMONIC,
+          "https://goerli.infura.io/v3/" + INFURA_KEY
+          // "wss://goerli.infura.io/ws/v3/2645f5383f544588975db84a58cd9af6"
+          
+        );
+      },
+      network_id: "*",
+      gas: 0x989680,
+      confirmations: 2,
+      timeoutBlocks: 200,
+      skipDryRun: true,
+      websocket: true,
+      timeoutBlocks: 50000,
+      networkCheckTimeout: 1000000,
+      skipDryRun: true
+
+    },
+    matic: {
+      provider: () => new HDWalletProvider(MNEMONIC, "https://polygon-mumbai.infura.io/v3/5250187d69d747f392fcf1d32bbbc64a"),
+      networkCheckTimeout: 10000,
+      ChainID: 80001,
+      network_id: 80001,
+      confirmations: 1,
+      timeoutBlocks: 200,
+      skipDryRun: true,
+    },
+    polygon: {
+      provider: () => new HDWalletProvider(MNEMONIC, "https://polygon-mainnet.infura.io/v3/5250187d69d747f392fcf1d32bbbc64a"),
+      networkCheckTimeout: 10000,
+      ChainID: 137,
+      network_id: 137,
+      confirmations: 1,
+      timeoutBlocks: 200,
+      skipDryRun: true,
+      // gasLimit: 6706583,
     },
     coverage: {
       host: 'localhost',
