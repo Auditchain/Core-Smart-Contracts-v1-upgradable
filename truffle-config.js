@@ -68,6 +68,7 @@ module.exports = {
 
 
     },
+<<<<<<< HEAD
     goerli: {
       provider: function () {
         return new HDWalletProvider(
@@ -88,6 +89,8 @@ module.exports = {
       skipDryRun: true
 
     },
+=======
+>>>>>>> 7624099384444123255aa5dfe8b1a1b76d4e0318
     matic: {
       provider: () => new HDWalletProvider(MNEMONIC, "https://polygon-mumbai.infura.io/v3/5250187d69d747f392fcf1d32bbbc64a"),
       networkCheckTimeout: 10000,
@@ -98,14 +101,22 @@ module.exports = {
       skipDryRun: true,
     },
     polygon: {
+<<<<<<< HEAD
       provider: () => new HDWalletProvider(MNEMONIC, "https://polygon-mainnet.infura.io/v3/5250187d69d747f392fcf1d32bbbc64a"),
+=======
+      provider: () => new HDWalletProvider(MNEMONIC, "https://polygon-rpc.com"),
+>>>>>>> 7624099384444123255aa5dfe8b1a1b76d4e0318
       networkCheckTimeout: 10000,
       ChainID: 137,
       network_id: 137,
       confirmations: 1,
       timeoutBlocks: 200,
       skipDryRun: true,
+<<<<<<< HEAD
       // gasLimit: 6706583,
+=======
+      gasLimit: 6706583,
+>>>>>>> 7624099384444123255aa5dfe8b1a1b76d4e0318
     },
     coverage: {
       host: 'localhost',
