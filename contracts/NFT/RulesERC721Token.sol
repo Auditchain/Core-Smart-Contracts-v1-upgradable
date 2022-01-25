@@ -5,7 +5,8 @@ import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721URIStorageUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
-import "./Auditchain/ICohort.sol";
+import "../Auditchain/ValidationsCohort.sol";
+
 
 /**
  * @title RulesERC721Token
@@ -14,7 +15,7 @@ import "./Auditchain/ICohort.sol";
 contract RulesERC721Token is ERC721Upgradeable,  ERC721URIStorageUpgradeable, ERC721EnumerableUpgradeable
 {
     using SafeMathUpgradeable for uint256;
-    ICohort cohort;
+    ValidationsCohort cohort;
 
     mapping(bytes32 => bool) public NFTCompleted;
     event Mint(uint256 tokenId, address recipient);
@@ -26,7 +27,7 @@ contract RulesERC721Token is ERC721Upgradeable,  ERC721URIStorageUpgradeable, ER
     }
 
 
-     function tokenURI(uint256 tokenId) public view virtual override(ERC721URIStorageUpgradeable, ERC721Upgradeable) returns (string memory) {
+   function tokenURI(uint256 tokenId) public view virtual override(ERC721URIStorageUpgradeable, ERC721Upgradeable) returns (string memory) {
        
         return super.tokenURI(tokenId);
     }
@@ -49,16 +50,13 @@ contract RulesERC721Token is ERC721Upgradeable,  ERC721URIStorageUpgradeable, ER
     /**
      * @dev Mints a token to an enterprise/rule creator with a given validation hash and cohort
      * @param _hash of the validated document
-     * @param _cohort address of the cohort
      * @return newTokenId
      */
-    function mintTo(bytes32 _hash, address _cohort)
+    function mintTo(bytes32 _hash)
         public
         returns (uint256)
     {
-        cohort = ICohort(_cohort);
-        (,uint256 executionTime , string memory url, uint256 consensus) = cohort.validations(_hash);
-        address enterprise = cohort.enterprise();
+        (,address enterprise,, uint256 executionTime , string memory url, uint256 consensus, , , , , ) = cohort.validations(_hash);
         require(enterprise != address(0), "RulesERC721Token:mintTo - Recipient address can't be 0");
         require(executionTime > 0 , "RulesERC721Token:mintTo - This rule hasn't been approved yet");
         require(consensus == 1,  "RulesERC721Token:mintTo - This rule hasn't received sufficient quorum yet");
@@ -71,12 +69,19 @@ contract RulesERC721Token is ERC721Upgradeable,  ERC721URIStorageUpgradeable, ER
         return newTokenId;
     }
 
+    function mintToPure(address user, string memory url) public returns (uint256) {
+
+        uint256 newTokenId = _getNextTokenId();
+
+        _safeMint(user, newTokenId);
+        _setTokenURI(newTokenId, url);
+        return newTokenId;
+
+    }
+
     function _getNextTokenId() private view returns (uint256) {
         return totalSupply().add(1);
     }
-
-
-   
 
 
 }
