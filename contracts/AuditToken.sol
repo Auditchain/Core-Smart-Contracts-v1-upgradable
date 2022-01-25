@@ -47,7 +47,7 @@ contract AuditToken is Locked, ERC20Upgradeable,  ERC20BurnableUpgradeable{
     }
 
     /// @dev prevent accidental sending of tokens to this token contract
-    /// @param _self - address of this contract
+    ///  _self - address of this contract
     modifier notSelf(address _self) {
         require(
             _self != address(this),
