@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.0;
-pragma experimental ABIEncoderV2;
-import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import "./Members.sol";
+import "./MemberHelpers.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
 
 
 /**
@@ -12,12 +12,15 @@ import "./Members.sol";
  * and Enterprise. 
  */
 
-contract CohortFactory is  AccessControlUpgradeable {
+contract CohortFactory is  AccessControlEnumerableUpgradeable {
 
     // Audit types to be used. Two types added for future expansion 
     enum AuditTypes {
-        Financial, System, Rules, NFT, Type5, Type6
+        Unknown, Financial, System, NFT, Type4, Type5
     }
+
+    bytes32 public constant SETTER_ROLE =  keccak256("SETTER_ROLE");
+
 
     uint256[] public minValidatorPerCohort;
 
@@ -28,69 +31,52 @@ contract CohortFactory is  AccessControlUpgradeable {
         uint256 invitationDate;      
         uint256 acceptanceDate;
         AuditTypes audits;
-        address cohort;
+        // address cohort;
         bool deleted;
     }
 
-    struct Cohorts {
-        address cohort;
-        AuditTypes audits;
-    }
 
-    mapping(address => Cohorts[]) public cohortList;
-    mapping(address => uint256) public cohortMap;
+    mapping(address => uint256[]) public cohortList;
+    mapping(address => mapping(uint256=>bool)) public cohortMap;
+    mapping (address => mapping(address=> AuditTypes[])) public validatorCohortList;  // list of validators
+    
 
     Members members;                                            // pointer to Members contract1 
+    MemberHelpers public memberHelpers;                         // pointerr to memberHelpers              
     mapping (address =>  Invitation[]) public invitations;      // invitations list
     address platformAddress;                                    // address to deposit platform fees
-    mapping (address => address[]) public validatorCohortList;  // list of validators
 
-    bytes32 public constant SETTER_ROLE =  keccak256("SETTER_ROLE");
 
-    event ValidatorInvited(address  inviting, address indexed invitee, AuditTypes audits, uint256 invitationNumber, address cohort);
+    event ValidatorInvited(address  inviting, address indexed invitee, AuditTypes indexed audits, uint256 invitationNumber);
     event InvitationAccepted(address indexed validator, uint256 invitationNumber);
-    event CohortCreated(address indexed enterprise, address cohort, AuditTypes audits);
+    event CohortCreated(address indexed enterprise, uint256 audits);
     event UpdateMinValidatorsPerCohort(uint256 minValidatorPerCohort, AuditTypes audits);
-    event ValidatorCleared(address validator, AuditTypes audit, address cohort, address enterprise);
+    event ValidatorCleared(address validator, AuditTypes audit, address enterprise);    
 
-    /// @dev check if caller is a setter     
-    modifier isSetter {
-        require(hasRole(SETTER_ROLE, msg.sender), "Members:isSetter - Caller is not a setter");
-
-        _;
-    }
 
     function initialize(address _members) public  {
-
-    // constructor(Members _members,  address _createCohortAddress ) {
         members = Members(_members);
         minValidatorPerCohort = [3,3,3,3,3,3];
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender); // 
     }
 
 
-    /**
-    * @dev create a list of validators to be initialized in new cohort   
-    * @param validators any array of address of the validators
-    * @param cohort in which the validators should be initialized     
-    */
-    function createValidatorCohortList(address[] memory validators, address cohort) internal {
+   /// @dev check if caller is a setter     
+    modifier isSetter {
+        require(hasRole(SETTER_ROLE, msg.sender), "Members:isSetter - Caller is not a setter");
 
-        for (uint256 i=0; i< validators.length; i++){
-            validatorCohortList[validators[i]].push(cohort);
-        }
+        _;
     }
-    
-   
-    /**
+
+   /**
     * @dev to be called by Governance contract to update new value for min validators per cohort
     * @param _minValidatorPerCohort new value 
     * @param audits type of validations
     */
-    function updateMinValidatorsPerCohort(uint256 _minValidatorPerCohort, uint256 audits) public  {
+    function updateMinValidatorsPerCohort(uint256 _minValidatorPerCohort, uint256 audits) public  isSetter() {
 
-        require(_minValidatorPerCohort != 0, "CreateCohort:updateMinValidatorsPerCohort - New value for the  min validator per cohort can't be 0");
-        require(audits <= 5 && audits >=0 , "Cohort Factory:updateMinValidatorsPerCohort - Audit type has to be <= 5 and >=0");
+        require(_minValidatorPerCohort != 0, "CohortFactory:updateMinValidatorsPerCohort - New value for the  min validator per cohort can't be 0");
+        require(audits <= 6 && audits >=0 , "Cohort Factory:updateMinValidatorsPerCohort - Audit type has to be <= 5 and >=0");
         minValidatorPerCohort[audits] = _minValidatorPerCohort;
         emit UpdateMinValidatorsPerCohort(_minValidatorPerCohort, AuditTypes(audits));
     }
@@ -100,36 +86,36 @@ contract CohortFactory is  AccessControlUpgradeable {
     * @param validator address of the validator to invite
     * @param audit type of the audit
     */
-    function inviteValidator(address validator, AuditTypes audit, address cohort) public {
+    function inviteValidator(address validator, uint256 audit) public {
 
         Invitation memory newInvitation;
-        bool isValidator = members.userMap(validator, 1);
-        bool isEnterprise = members.userMap(msg.sender, 0);
+        bool isValidator = members.userMap(validator, Members.UserType(1));
+        bool isEnterprise = members.userMap(msg.sender, Members.UserType(0));
         (bool invited, ) = isValidatorInvited(msg.sender, validator, audit);
         require( !invited , "CohortFactory:inviteValidator - This validator has been already invited for this validation type." );
         require( isEnterprise, "CohortFactory:inviteValidator - Only Enterprise user can invite Validators.");
         require( isValidator, "CohortFactory:inviteValidator - Only Approved Validators can be invited.");
-        require( members.deposits(validator) > 0,"CohortFactory:inviteValidator - This validator has not staked any tokens yet.");
+        require( memberHelpers.deposits(validator) > 0,"CohortFactory:inviteValidator - This validator has not staked any tokens yet.");
         newInvitation.validator = validator;
         newInvitation.invitationDate = block.timestamp;     
-        newInvitation.audits = audit;   
-        newInvitation.cohort = cohort;
+        newInvitation.audits = AuditTypes(audit);   
         invitations[msg.sender].push(newInvitation);
        
-        emit ValidatorInvited(msg.sender, validator, audit, invitations[msg.sender].length - 1, cohort);
+        emit ValidatorInvited(msg.sender, validator, AuditTypes(audit), invitations[msg.sender].length - 1);
     }
+    
 
     /**
     * @dev Used by Enterprise to invite multiple validators in one call 
     * @param validator address of the validator to invite
     * @param audit type of the audit
     */
-    function inviteValidatorMultiple(address[] memory validator, AuditTypes audit, address cohort) public{
+    function inviteValidatorMultiple(address[] memory validator, AuditTypes audit) public{
 
         uint256 length = validator.length;
         require(length <= 256, "CohortFactory-inviteValidatorMultiple: List too long");
         for (uint256 i = 0; i < length; i++) {
-            inviteValidator(validator[i], audit, cohort);
+            inviteValidator(validator[i], uint256(audit));
         }
     }
 
@@ -144,45 +130,23 @@ contract CohortFactory is  AccessControlUpgradeable {
         require( invitations[enterprise][invitationNumber].acceptanceDate == 0, "CohortFactory:acceptInvitation- This invitation has been accepted already .");
         require( invitations[enterprise][invitationNumber].validator == msg.sender, "CohortFactory:acceptInvitation - You are accepting invitation to which you were not invited or this invitation doesn't exist.");
         invitations[enterprise][invitationNumber].acceptanceDate = block.timestamp;
-
-            if (invitations[enterprise][invitationNumber].cohort != address(0)) // adding validator to existing cohort
-                require(
-                    ICohort(invitations[enterprise][invitationNumber].cohort)
-                    .addAdditionalValidator(msg.sender), 
-                    "CohortFactory:inviteValidator - Problem adding new validator"
-                    );
-
+          
         emit InvitationAccepted(msg.sender, invitationNumber);
     }
 
-    /**
-    * @dev Used by Enterprise to remove existing validator
-    * @param validator validator to remove
-    * @param audit type of audit 
-    * @param cohort cohort from which validator is removed
-    */
-    function clearInvitationRemoveValidator(address validator, AuditTypes audit, address cohort) public {
+
+    function clearInvitationRemoveValidator(address validator, AuditTypes audit) public  returns (bool) {
 
         for (uint256 i = 0; i < invitations[msg.sender].length; i++){
-            if (invitations[msg.sender][i].audits == audit && 
-                invitations[msg.sender][i].validator ==  validator){
-                invitations[msg.sender][i].deleted = true;
-                require(ICohort(cohort).removeValidator(validator, msg.sender), 
-                        "CohortFactory:clearInvitationValidator - Problem removing validator in Cohort contract");
-                emit ValidatorCleared(validator, audit, cohort, msg.sender);
-            }
-        }
-    }
-
-    function clearInvitationRemoveValidator(address validator, AuditTypes audit) public {
-
-        for (uint256 i = 0; i < invitations[msg.sender].length; i++){
-            if (invitations[msg.sender][i].audits == audit && 
-                invitations[msg.sender][i].validator ==  validator){
+            if (invitations[msg.sender][i].audits == audit && invitations[msg.sender][i].validator ==  validator){
                 invitations[msg.sender][i].deleted = true;                
-                emit ValidatorCleared(validator, audit, address(0x0), msg.sender);
+                emit ValidatorCleared(validator, audit, msg.sender);
+                return true;
             }
         }
+
+
+        revert("This invitation doesn't exist");
     }
 
     /**
@@ -225,10 +189,10 @@ contract CohortFactory is  AccessControlUpgradeable {
     * @return true if invited
     * @return true if accepted invitation
     */
-    function isValidatorInvited(address enterprise, address validator, AuditTypes audits) public view returns (bool, bool) {
+    function isValidatorInvited(address enterprise, address validator, uint256 audits) public view returns (bool, bool) {
 
         for (uint i=0; i < invitations[enterprise].length; ++i ){
-            if (invitations[enterprise][i].audits == audits && 
+            if (invitations[enterprise][i].audits == AuditTypes(audits) && 
                 invitations[enterprise][i].validator == validator &&
                 !invitations[enterprise][i].deleted){
                 if (invitations[enterprise][i].acceptanceDate > 0)
@@ -240,69 +204,98 @@ contract CohortFactory is  AccessControlUpgradeable {
     }
 
      /**
-    * @dev Used to return list of cohorts for enterprise
+    * @dev Used to determine if validator has been invited and/or if validation has been accepted
     * @param enterprise inviting party
-    * @return cohort address 
-    * @return audit type
+    * @param validator address of the validator
+    * @param audits types
+    * @param invitNumber invitation number
+    * @return true if invited
+    * @return true if accepted invitation
     */
-    function returnCohorts(address enterprise) public view returns (address[] memory, uint256[] memory){
+    function isValidatorInvitedNumber(address enterprise, address validator, uint256 audits, uint256 invitNumber) public view returns (bool, bool) {
 
-        address[] memory cohort = new address[](cohortList[enterprise].length);
-        uint256[] memory audits = new uint256[](cohortList[enterprise].length);
-
-        for (uint256 i; i < cohortList[enterprise].length; i++){
-            cohort[i] = cohortList[enterprise][i].cohort;
-            audits[i] = uint256(cohortList[enterprise][i].audits);
+        if (invitations[enterprise][invitNumber].audits == AuditTypes(audits) && 
+            invitations[enterprise][invitNumber].validator == validator &&
+            !invitations[enterprise][invitNumber].deleted){
+            if (invitations[enterprise][invitNumber].acceptanceDate > 0)
+                return (true, true);
+            return (true, false);
         }
-        return (cohort, audits);
+        return (false, false);
     }
 
-     /**
-     * @dev Function to calculate outstanding validations for enterprise. 
-     */   
-    function returnOutstandingValidations() public view returns(uint256) {
+    /**
+    * @dev Returns true for audit types for which enterprise has created cohorts.
+    * @param enterprise inviting party
+    * @return list of boolean variables with value true for audit types enterprise has initiated cohort, 
+    */
+    function returnCohorts(address enterprise) public view returns (bool[] memory){
 
-         (address[] memory cohorts, ) = returnCohorts(msg.sender);
-         uint totalOutstandingValidations;
+        uint256 auditCount = 6;
+        bool[] memory audits = new bool[](auditCount);
 
-         for (uint256 i; i< cohorts.length; i++)
-             totalOutstandingValidations = totalOutstandingValidations + ICohort(cohorts[i]).outstandingValidations();
-
-        return totalOutstandingValidations;
+        for (uint256 i; i < auditCount; i++){
+            if (cohortMap[enterprise][i])
+               audits[i] = true;
+        }
+        return (audits);
     }
 
-    function returnValidatorList(address enterprise, AuditTypes audit) public view returns (address[] memory ) {
 
-        address[] memory validatorsList = new address[](returnInvitationCount(enterprise, audit));
+    /**
+    * @dev Returns list of validators 
+    * @param enterprise to get list for
+    * @param audit type of audits
+    * @return list of boolean variables with value true for audit types enterprise has initiated cohort, 
+    */
+    function returnValidatorList(address enterprise, uint256 audit)public view returns(address[] memory){
+
+        address[] memory validatorsList = new address[](returnInvitationCount(enterprise, AuditTypes(audit)));
         uint k;
         for (uint i=0; i < invitations[enterprise].length; ++i ){
-            if (invitations[enterprise][i].audits == audit && invitations[enterprise][i].acceptanceDate > 0){
+            if (uint256(invitations[enterprise][i].audits) == audit && invitations[enterprise][i].acceptanceDate > 0){
                 validatorsList[k] = invitations[enterprise][i].validator;
                 k++;
             }
         }
         return validatorsList;
-
     }
 
-        /**
+     /**
+    * @dev create a list of validators to be initialized in new cohort   
+    * @param validators any array of address of the validators
+    * @param enterprise who created cohort
+    * @param audit  type of audit
+    */
+    function createValidatorCohortList(address[] memory validators, address enterprise, AuditTypes audit) internal {
+
+        for (uint256 i=0; i< validators.length; i++){
+            validatorCohortList[validators[i]][enterprise].push(audit);
+        }
+    }
+
+
+   /**
     * @dev Used to determine cohorts count for given validator
     * @param validator address of the validator
+    * @return number of cohorts
+    */ 
+    function returnValidatorCohortsCount(address validator, address enterprise) public view returns (uint256){
+
+        return validatorCohortList[validator][enterprise].length;
+    }
+
+    /**
+    * @dev Initiate creation of a new cohort 
+    * @param audit type
     */
-    function returnValidatorCohortsCount(address validator) public view returns (uint256){
-
-        return validatorCohortList[validator].length;
+    function createCohort(uint256 audit) public {
+        require(!cohortMap[msg.sender][uint256(audit)] , "CohortFactory:createCohort - This cohort already exists.");
+        address[] memory validators =  returnValidatorList(msg.sender, audit);
+        require(validators.length >= minValidatorPerCohort[uint256(audit)], "CohortFactory:createCohort - Number of validators below required minimum.");
+        cohortMap[msg.sender][uint256(audit)] = true;   
+        createValidatorCohortList(validators, msg.sender, AuditTypes(audit));
+        emit CohortCreated(msg.sender, audit);
+        
     }
-   
-
-    function registerCohort(address enterprise, address cohortAddress, address[] memory validators, AuditTypes audit) public  returns (bool){
-
-        cohortList[enterprise].push();
-        cohortList[enterprise][cohortList[enterprise].length - 1].cohort = cohortAddress;
-        cohortList[enterprise][cohortList[enterprise].length - 1].audits = audit;
-        createValidatorCohortList(validators, cohortAddress);
-        emit CohortCreated(enterprise, cohortAddress, audit);
-        return true;
-    }
-
 }
