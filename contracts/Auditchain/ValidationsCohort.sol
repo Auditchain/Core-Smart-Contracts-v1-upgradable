@@ -78,7 +78,7 @@ contract ValidationsCohort is Validations {
         
     }
 
-     function returnValidatorCount(bytes32 validationHash) public override returns (uint256){
+     function returnValidatorCount(bytes32 validationHash) public view override returns (uint256){
 
         Validation storage validation = validations[validationHash];
         address[] memory validatorsList = cohortFactory.returnValidatorList(validation.requestor, uint256(validation.auditType));
