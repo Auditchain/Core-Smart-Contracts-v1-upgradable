@@ -9,9 +9,9 @@ import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 contract ValidationsCohort is Validations {
     using SafeMathUpgradeable for uint256;
 
-    function initialize(address _members, address _memberHelpers, address _cohortFactory, address _depositModifiers, address _nodeOperations, address _validationHelpers) public override
+    function initialize(address _members, address _memberHelpers, address _cohortFactory, address _depositModifiers, address _nodeOperationsHelpers,  address _nodeOperations, address _validationHelpers) public override
     {
-            super.initialize(_members, _memberHelpers, _cohortFactory, _depositModifiers, _nodeOperations, _validationHelpers);
+            super.initialize(_members, _memberHelpers, _cohortFactory, _depositModifiers, _nodeOperations, _nodeOperationsHelpers,_validationHelpers);
 
     }
 
