@@ -45,6 +45,9 @@
     "babel-preset-stage-3": "^6.24.1",
     "babel-register": "^6.26.0",
     "dotenv": "^9.0.2",
+    "ipfs-api": "^26.1.2",
+    "ipfs-http-client": "^53.0.1",
+    "truffle-contract": "^4.0.31",
     "truffle-hdwallet-provider": "^1.0.17"
   }
 }
