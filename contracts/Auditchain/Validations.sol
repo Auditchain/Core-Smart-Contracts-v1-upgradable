@@ -2,6 +2,7 @@
 pragma solidity =0.8.0;
 
 import "./INodeOperations.sol";
+import "./INodeOperationsHelpers.sol";
 import "./Members.sol";
 import "./DepositModifiers.sol";
 import "./ICohortFactory.sol";
@@ -22,7 +23,10 @@ abstract contract Validations is  ReentrancyGuardUpgradeable{
     DepositModifiers public depositModifiers;
     ICohortFactory public cohortFactory;
     INodeOperations public nodeOperations;
+    INodeOperationsHelpers public nodeOperationsHelpers;
+
     IValidatinosHelpers public validationHelpers;
+
     mapping(address => uint256) public outstandingValidations;
 
     // Audit types to be used. Three types added for future expansion
@@ -70,13 +74,14 @@ abstract contract Validations is  ReentrancyGuardUpgradeable{
     event WinnerVoted(address validator, address winner, bool isValid);
 
 
-    function initialize(address _members, address _memberHelpers, address _cohortFactory, address _depositModifiers, address _nodeOperations, address _validationHelpers) public virtual {
+    function initialize(address _members, address _memberHelpers, address _cohortFactory, address _depositModifiers, address _nodeOperations, address _nodeOperationsHelpers, address _validationHelpers) public virtual {
 
         members = Members(_members);
         memberHelpers = MemberHelpers(_memberHelpers);
         cohortFactory = ICohortFactory(_cohortFactory);
         depositModifiers = DepositModifiers(_depositModifiers);
         nodeOperations = INodeOperations(_nodeOperations);
+        nodeOperationsHelpers = INodeOperationsHelpers(_nodeOperationsHelpers);
         validationHelpers = IValidatinosHelpers(_validationHelpers);
         // _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         quorum = 100;  
