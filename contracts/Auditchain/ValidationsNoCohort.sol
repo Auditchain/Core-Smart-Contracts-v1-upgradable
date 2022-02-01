@@ -9,8 +9,8 @@ import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 contract ValidationsNoCohort is Validations {
     using SafeMathUpgradeable for uint256;
 
-    function initialize(address _members, address _memberHelpers, address _cohortFactory, address _depositModifiers, address _nodeOperations, address _validationHelpers) public override {
-        super.initialize(_members, _memberHelpers, _cohortFactory, _depositModifiers, _nodeOperations, _validationHelpers);
+    function initialize(address _members, address _memberHelpers, address _cohortFactory, address _depositModifiers, address _nodeOperations, address _nodeOperationsHelpers,  address _validationHelpers) public override {
+        super.initialize(_members, _memberHelpers, _cohortFactory, _depositModifiers, _nodeOperations, _nodeOperationsHelpers, _validationHelpers);
 
     }
 
@@ -34,8 +34,12 @@ contract ValidationsNoCohort is Validations {
    * @return true or false 
    */
       function checkIfRequestorHasFunds(address requestor) public override view returns (bool) {
-       if (outstandingValidations[requestor] > 0 )
-          return ( memberHelpers.deposits(requestor) > nodeOperations.POWFee().mul(outstandingValidations[requestor]));
+
+       if (memberHelpers.deposits(requestor) == 0)
+            return false;
+       else if (outstandingValidations[requestor] > 0 )
+       
+          return ( memberHelpers.deposits(requestor) > nodeOperationsHelpers.POWFee().mul(outstandingValidations[requestor]));
        else 
           return true;
     }
