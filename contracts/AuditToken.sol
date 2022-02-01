@@ -44,6 +44,7 @@ contract AuditToken is Locked, ERC20Upgradeable,  ERC20BurnableUpgradeable{
         __ERC20_init("Auditchain", "AUDT");
         require(account != address(0), "AuditToken:initialize - Address can't be 0");
         _setupRole(DEFAULT_ADMIN_ROLE, account);
+        _mint(account, 250000000000000000000000000);
     }
 
     /// @dev prevent accidental sending of tokens to this token contract
