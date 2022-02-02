@@ -129,7 +129,7 @@ module.exports = async function (deployer, network, accounts) { // eslint-disabl
 
 
 
-  await deployProxy(DepositModifiers, [members.address, token.address, memberHelpers.address, cohortFactory.address, nodeOperations.address], { deployer, initializer: 'initialize' });
+  await deployProxy(DepositModifiers, [members.address, token.address, memberHelpers.address, cohortFactory.address, nodeOperations.address, nodeOperationsHelpers.address], { deployer, initializer: 'initialize' });
   let depositModifiers = await DepositModifiers.deployed();
   console.log("deposit modifiers address:", depositModifiers.address);
 
@@ -137,12 +137,12 @@ module.exports = async function (deployer, network, accounts) { // eslint-disabl
 
 
 
-  await deployProxy(Cohort, [members.address, memberHelpers.address, cohortFactory.address, depositModifiers.address, nodeOperations.address, validationHelpers.address], { deployer, initializer: 'initialize' });
+  await deployProxy(Cohort, [members.address, memberHelpers.address, cohortFactory.address, depositModifiers.address, nodeOperations.address,  nodeOperationsHelpers.address, validationHelpers.address], { deployer, initializer: 'initialize' });
   let cohort = await Cohort.deployed();
   console.log("cohort address:", cohort.address);
 
 
-  await deployProxy(NoCohort, [members.address, memberHelpers.address, cohortFactory.address, depositModifiers.address, nodeOperations.address, validationHelpers.address], { deployer, initializer: 'initialize' } );
+  await deployProxy(NoCohort, [members.address, memberHelpers.address, cohortFactory.address, depositModifiers.address, nodeOperations.address,  nodeOperationsHelpers.address, validationHelpers.address], { deployer, initializer: 'initialize' } );
   let noCohort = await NoCohort.deployed();
   console.log("no cohort address:", noCohort.address);
 
@@ -176,6 +176,7 @@ module.exports = async function (deployer, network, accounts) { // eslint-disabl
   console.log('VALIDATIONS_COHORT_ADDRESS=' + cohort.address);
   console.log('VALIDATIONS_NO_COHORT_ADDRESS=' + noCohort.address);
   console.log('NODE_OPERATIONS_ADDRESS=' + nodeOperations.address);
+  console.log('NODE_OPERATIONS_HELPERS_ADDRESS=' + NodeOperationsHelpers.address);
   console.log('GOVERNOR_ALPHA_ADDRESS=' + gov.address);
   console.log('TIMELOCK_ADDRESS=' + timelock.address);
   console.log('RULES_NFT_ADDRESS=' + nft.address);
@@ -193,6 +194,7 @@ module.exports = async function (deployer, network, accounts) { // eslint-disabl
   console.log('"VALIDATIONS_COHORT_ADDRESS":"' + cohort.address + '",');
   console.log('"VALIDATIONS_NO_COHORT_ADDRESS":"' + noCohort.address + '",')
   console.log('"NODE_OPERATIONS_ADDRESS":"' + nodeOperations.address + '",');
+  console.log('"NODE_OPERATIONS_HELPERS_ADDRESS":"' + NodeOperationsHelpers.address + '",');
   console.log('"GOVERNOR_ALPHA_ADDRESS":"' + gov.address + '",');
   console.log('"TIMELOCK_ADDRESS":"' + timelock.address + '",');
   console.log('"RULES_NFT_ADDRESS":"' + nft.address + '",' + "\n\n");
@@ -404,6 +406,7 @@ module.exports = async function (deployer, network, accounts) { // eslint-disabl
   await token.transfer(validator14, validatorTokenAmount, { from: admin });
   await token.transfer(validator15, validatorTokenAmount, { from: admin });
   await token.transfer(validator16, validatorTokenAmount, { from: admin });
+
 
   console.log("FINISHED");
 
