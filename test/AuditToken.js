@@ -7,10 +7,11 @@ import {
 } from './helpers/utils.js';
 
 import expectRevert from './helpers/expectRevert'
+const { upgradeProxy, deployProxy } = require('@openzeppelin/truffle-upgrades');
 
 var BigNumber = require('big-number');
 
-contract("ERC20 Auditchain Token", (accounts) => {
+contract("ERC20 Auditchain Token", (accounts, deployer) => {
     let owner;
     let holder1;
     let holder2;
@@ -22,6 +23,7 @@ contract("ERC20 Auditchain Token", (accounts) => {
     let CONTROLLER_ROLE = web3.utils.keccak256("CONTROLLER_ROLE");
     let DEFAULT_ADMIN_ROLE = "0x00";
     let MINTER_ROLE = web3.utils.keccak256("MINTER_ROLE");
+    let initialSupply = "260000000000000000000000000";
 
 
     before(async () => {
@@ -35,13 +37,13 @@ contract("ERC20 Auditchain Token", (accounts) => {
 
     beforeEach(async () => {
 
-        // await deployProxy(Token, [owner], { deployer, initializer: 'initialize' });
-        // let token = await Token.deployed();
-        token = await TOKEN.new(owner);
-        await token.initialize(owner);
+        // await deployProxy(TOKEN, [owner], { deployer, initializer: 'initialize' });
+        token = await TOKEN.deployed();
+        // token = await TOKEN.new(owner);
+        // await token.initialize(owner);
 
         await token.grantRole(MINTER_ROLE, owner, { from: owner });
-        await token.mint(owner, "260000000000000000000000000");
+        await token.mint(owner, initialSupply);
 
         await token.transfer(holder1, transferFunds, {
             from: owner
@@ -51,20 +53,23 @@ contract("ERC20 Auditchain Token", (accounts) => {
 
 
     })
-    describe("Constructor", async () => {
-        it("Verify constructors", async () => {
+    describe("Initialize", async () => {
+        it("Verify initial values", async () => {
 
-            token = await TOKEN.new(owner);
-            await token.initialize(owner);
+            // token = await TOKEN.new(owner);
+            // await token.initialize(owner);
 
             let tokenName = await token.name.call();
+            console.log("token name:", tokenName)
             assert.equal(tokenName.toString(), "Auditchain");
 
             let tokenSymbol = await token.symbol();
+            console.log("symbol:", tokenSymbol)
+
             assert.equal(tokenSymbol.toString(), "AUDT");
 
             let tokenSupply = await token.totalSupply();
-            assert.equal(tokenSupply.toString(), "0");
+            assert.equal(tokenSupply.toString(), initialSupply);
         });
     });
 
@@ -80,10 +85,10 @@ contract("ERC20 Auditchain Token", (accounts) => {
 
         })
 
-        it('It should not mint tokens by holder1 before authorization ', async () => {
+        it('It should not mint tokens by holder2 before authorization ', async () => {
 
             try {
-                await token.mint(holder2, transferFunds, { from: holder1 });
+                await token.mint(holder2, transferFunds, { from: holder2 });
                 expectRevert();
             } catch (error) {
                 ensureException(error);
@@ -115,13 +120,10 @@ contract("ERC20 Auditchain Token", (accounts) => {
             }
         })
 
-    }
-    )
+    })
 
     describe("transfer", async () => {
         it('transfer: ether directly to the token contract -- it will throw', async () => {
-            token = await TOKEN.new(owner);
-            await token.initialize(owner);
             try {
                 await web3
                     .eth
@@ -136,16 +138,26 @@ contract("ERC20 Auditchain Token", (accounts) => {
             }
         });
 
-        it('transfer: should transfer 1000 to holder1 from owner', async () => {
+        it('transfer: should transfer 1000 to holder4 from owner', async () => {
 
-            let balance = await token
-                .balanceOf
-                .call(holder1);
+            await token.transfer(holder4, transferFunds, {
+                from: owner
+            });
+
+            let balance = await token.balanceOf.call(holder4);
             assert.strictEqual(balance.toNumber(), transferFunds);
         });
 
         it('transfer: first should transfer 10000 to holder1 from owner then holder1 transfers 10000 to holder2',
             async () => {
+
+                let balanceHolder1Before = await token
+                    .balanceOf
+                    .call(holder1)
+
+                let balanceHolder2Before = await token
+                    .balanceOf
+                    .call(holder2)
 
                 await token.transfer(holder2, transferFunds, {
                     from: holder1
@@ -159,650 +171,646 @@ contract("ERC20 Auditchain Token", (accounts) => {
                     .balanceOf
                     .call(holder2);
 
-                assert.strictEqual(balanceHolder2.toNumber(), transferFunds);
+                assert.strictEqual(balanceHolder2.toString(), (Number(balanceHolder2Before) + Number(transferFunds)).toString());
 
-                assert.strictEqual(balanceHolder1.toNumber(), 0);
+                assert.strictEqual((Number(balanceHolder1Before) - Number(transferFunds)).toString(), balanceHolder1.toString());
             });
 
-        it('transfer: should fail when transferring to token contract', async () => {
+            it('transfer: should fail when transferring to token contract', async () => {
 
-            try {
-
-                await token.transfer(token.address, transferFunds, {
-                    from: owner
-                });
-
-                expectRevert();
-            } catch (error) {
-                ensureException(error);
-            }
-        });
-
-        it('transfer: should fail when transferring to user who is locked', async () => {
-
-            await token.mint(holder2, transferFunds, { from: owner });
-            await token.addLock(holder1, { from: owner })
-
-            try {
-
-                await token.transfer(holder1, transferFunds, {
-                    from: holder2
-                });
-                expectRevert();
-
-            } catch (error) {
-                ensureException(error);
-            }
-        });
-
-        it('transfer: should fail when transferring from user who is locked', async () => {
-
-            await token.mint(holder1, transferFunds, { from: owner });
-            await token.addLock(holder1, { from: owner })
-
-            try {
-
-                await token.transfer(holder2, transferFunds, {
-                    from: holder1
-                });
-                expectRevert();
-
-            } catch (error) {
-                ensureException(error);
-            }
-        });
-
-
-        it('transfer: should transfer tokens to user who is locked from owner', async () => {
-
-            await token.addLock(holder1, { from: owner })
-
-            await token.transfer(holder2, transferFunds, {
-                from: owner
-            });
-
-            let balanceHolder1 = await token
-                .balanceOf
-                .call(holder1)
-
-            assert.strictEqual(balanceHolder1.toNumber(), transferFunds);
-        })
-
-
-    });
-
-
-    describe("approve", async () => {
-        it('approve: holder1 should approve 1000 to holder2', async () => {
-
-            await token.approve(holder2, transferFunds, {
-                from: holder1
-            });
-            let _allowance = await token
-                .allowance
-                .call(holder1, holder2);
-            assert.strictEqual(_allowance.toNumber(), transferFunds);
-        });
-
-        it('approve: holder1 should approve 1000 to holder2 & withdraws 200 once', async () => {
-
-
-            await token.approve(holder2, transferFunds, {
-                from: holder1
-            })
-            let _allowance1 = await token
-                .allowance
-                .call(holder1, holder2);
-            assert.strictEqual(_allowance1.toNumber(), transferFunds);
-
-
-            await token.transferFrom(holder1, holder3, 200, {
-                from: holder2
-            });
-
-            let balance = await token.balanceOf(holder3, {
-                from: owner
-            })
-
-            assert.strictEqual(balance.toNumber(), 200);
-
-
-            let _allowance2 = await token
-                .allowance
-                .call(holder1, holder2);
-            assert.strictEqual(_allowance2.toNumber(), 800);
-
-            let _balance = await token
-                .balanceOf
-                .call(holder1);
-            assert.strictEqual(_balance.toNumber(), 800);
-        });
-
-        it('approve: holder1 should approve 1000 to holder2 & withdraws 200 twice', async () => {
-
-            await token.approve(holder2, transferFunds, {
-                from: holder1
-            });
-            let _allowance1 = await token
-                .allowance
-                .call(holder1, holder2);
-            assert.strictEqual(_allowance1.toNumber(), transferFunds);
-
-            await token.transferFrom(holder1, holder3, 200, {
-                from: holder2
-            });
-            let _balance1 = await token
-                .balanceOf
-                .call(holder3);
-            assert.strictEqual(_balance1.toNumber(), 200);
-            let _allowance2 = await token
-                .allowance
-                .call(holder1, holder2);
-            assert.strictEqual(_allowance2.toNumber(), 800);
-            let _balance2 = await token
-                .balanceOf
-                .call(holder1);
-            assert.strictEqual(_balance2.toNumber(), 800);
-            await token.transferFrom(holder1, holder4, 200, {
-                from: holder2
-            });
-            let _balance3 = await token
-                .balanceOf
-                .call(holder4);
-            assert.strictEqual(_balance3.toNumber(), 200);
-            let _allowance3 = await token
-                .allowance
-                .call(holder1, holder2);
-            assert.strictEqual(_allowance3.toNumber(), 600);
-            let _balance4 = await token
-                .balanceOf
-                .call(holder1);
-            assert.strictEqual(_balance4.toNumber(), 600);
-        });
-
-        it('Approve max (2^256 - 1)', async () => {
-            let token = await TOKEN.new(owner);
-            await token.approve(holder1, '115792089237316195423570985008687907853269984665640564039457584007913129639935', {
-                from: holder2
-            });
-            let _allowance = await token.allowance(holder2, holder1);
-            //console.log("allowance " + _allowance.toNumber());
-            let result = _allowance.toString() === ('115792089237316195423570985008687907853269984665640564039457584007913129639935');
-            assert.isTrue(result);
-        });
-
-
-        it('approves: Holder1 approves Holder2 of 1000 & withdraws 800 & 500 (2nd tx should fail)',
-            async () => {
-
-                await token.approve(holder2, transferFunds, {
-                    from: holder1
-                });
-                let _allowance1 = await token
-                    .allowance
-                    .call(holder1, holder2);
-                assert.strictEqual(_allowance1.toNumber(), transferFunds);
-                await token.transferFrom(holder1, holder3, 800, {
-                    from: holder2
-                });
-                let _balance1 = await token
-                    .balanceOf
-                    .call(holder3);
-                assert.strictEqual(_balance1.toNumber(), 800);
-                let _allowance2 = await token
-                    .allowance
-                    .call(holder1, holder2);
-                assert.strictEqual(_allowance2.toNumber(), 200);
-                let _balance2 = await token
-                    .balanceOf
-                    .call(holder1);
-                assert.strictEqual(_balance2.toNumber(), 200);
                 try {
-                    await token.transferFrom(holder1, holder3, 500, {
-                        from: holder2
+
+                    await token.transfer(token.address, transferFunds, {
+                        from: owner
                     });
+
                     expectRevert();
                 } catch (error) {
                     ensureException(error);
                 }
             });
 
-    });
+            it('transfer: should fail when transferring to user who is locked', async () => {
 
-    describe("transferFrom", async () => {
-        it('transferFrom: Attempt to  withdraw from account with no allowance  -- fail', async () => {
+                await token.mint(holder2, transferFunds, { from: owner });
+                await token.addLock(holder1, { from: owner })
 
-
-            try {
-                await token
-                    .transferFrom
-                    .call(holder1, holder3, 100, {
-                        from: holder2
-                    });
-                expectRevert();
-            } catch (error) {
-                ensureException(error);
-            }
-        });
-
-        it('transferFrom: Allow holder2 1000 to withdraw from holder1. Withdraw 800 and then approve 0 & attempt transfer',
-            async () => {
-
-                await token.approve(holder2, transferFunds, {
-                    from: holder1
-                });
-                let _allowance1 = await token
-                    .allowance
-                    .call(holder1, holder2);
-                assert.strictEqual(_allowance1.toNumber(), transferFunds);
-                await token.transferFrom(holder1, holder3, 200, {
-                    from: holder2
-                });
-                let _balance1 = await token
-                    .balanceOf
-                    .call(holder3);
-                assert.strictEqual(_balance1.toNumber(), 200);
-                let _allowance2 = await token
-                    .allowance
-                    .call(holder1, holder2);
-                assert.strictEqual(_allowance2.toNumber(), 800);
-                let _balance2 = await token
-                    .balanceOf
-                    .call(holder1);
-                assert.strictEqual(_balance2.toNumber(), 800);
-                await token.approve(holder2, 0, {
-                    from: holder1
-                });
                 try {
-                    await token.transferFrom(holder1, holder3, 200, {
+
+                    await token.transfer(holder1, transferFunds, {
                         from: holder2
                     });
                     expectRevert();
+
                 } catch (error) {
                     ensureException(error);
                 }
             });
 
-        it('transferFrom: should fail when transferring to user who is locked', async () => {
+            it('transfer: should fail when transferring from user who is locked', async () => {
 
-            // await token.mint(holder1, transferFunds, { from: owner });
+                await token.mint(holder1, transferFunds, { from: owner });
+                await token.addLock(holder1, { from: owner })
 
-            await token.approve(holder2, transferFunds, {
-                from: holder1
+                try {
+
+                    await token.transfer(holder2, transferFunds, {
+                        from: holder1
+                    });
+                    expectRevert();
+
+                } catch (error) {
+                    ensureException(error);
+                }
             });
 
-            await token.addLock(holder3, { from: owner })
 
-            try {
+            it('transfer: should transfer tokens to user who is locked from owner', async () => {
 
-                await token.transferFrom(holder1, holder3, transferFunds, {
-                    from: holder2
-                });
+                let balanceHolder1Before = await token.balanceOf.call(holder1)
 
-                expectRevert();
-            } catch (error) {
-                ensureException(error);
-            }
-        });
+                await token.addLock(holder1, { from: owner })
 
-        it('transferFrom: should fail when transferring from user who is locked', async () => {
+                await token.transfer(holder1, transferFunds, {from: owner});
 
-            await token.approve(holder2, transferFunds, {
-                from: holder1
-            });
+                let balanceHolder1 = await token.balanceOf.call(holder1)
 
-            await token.addLock(holder1, { from: owner })
-
-            try {
-
-                await token.transferFrom(holder1, holder3, transferFunds, {
-                    from: holder2
-                });
-                expectRevert();
-
-            } catch (error) {
-                ensureException(error);
-            }
-        });
+                assert.strictEqual(Number(balanceHolder1) - Number(balanceHolder1Before), transferFunds);
+            })
     });
 
 
-    describe("burn", async () => {
+    // describe("approve", async () => {
+    //     it('approve: holder1 should approve 1000 to holder2', async () => {
+
+    //         await token.approve(holder2, transferFunds, {
+    //             from: holder1
+    //         });
+    //         let _allowance = await token
+    //             .allowance
+    //             .call(holder1, holder2);
+    //         assert.strictEqual(_allowance.toNumber(), transferFunds);
+    //     });
+
+    //     it('approve: holder1 should approve 1000 to holder2 & withdraws 200 once', async () => {
+
+
+    //         await token.approve(holder2, transferFunds, {
+    //             from: holder1
+    //         })
+    //         let _allowance1 = await token
+    //             .allowance
+    //             .call(holder1, holder2);
+    //         assert.strictEqual(_allowance1.toNumber(), transferFunds);
+
+
+    //         await token.transferFrom(holder1, holder3, 200, {
+    //             from: holder2
+    //         });
+
+    //         let balance = await token.balanceOf(holder3, {
+    //             from: owner
+    //         })
+
+    //         assert.strictEqual(balance.toNumber(), 200);
+
+
+    //         let _allowance2 = await token
+    //             .allowance
+    //             .call(holder1, holder2);
+    //         assert.strictEqual(_allowance2.toNumber(), 800);
+
+    //         let _balance = await token
+    //             .balanceOf
+    //             .call(holder1);
+    //         assert.strictEqual(_balance.toNumber(), 800);
+    //     });
+
+    //     it('approve: holder1 should approve 1000 to holder2 & withdraws 200 twice', async () => {
+
+    //         await token.approve(holder2, transferFunds, {
+    //             from: holder1
+    //         });
+    //         let _allowance1 = await token
+    //             .allowance
+    //             .call(holder1, holder2);
+    //         assert.strictEqual(_allowance1.toNumber(), transferFunds);
+
+    //         await token.transferFrom(holder1, holder3, 200, {
+    //             from: holder2
+    //         });
+    //         let _balance1 = await token
+    //             .balanceOf
+    //             .call(holder3);
+    //         assert.strictEqual(_balance1.toNumber(), 200);
+    //         let _allowance2 = await token
+    //             .allowance
+    //             .call(holder1, holder2);
+    //         assert.strictEqual(_allowance2.toNumber(), 800);
+    //         let _balance2 = await token
+    //             .balanceOf
+    //             .call(holder1);
+    //         assert.strictEqual(_balance2.toNumber(), 800);
+    //         await token.transferFrom(holder1, holder4, 200, {
+    //             from: holder2
+    //         });
+    //         let _balance3 = await token
+    //             .balanceOf
+    //             .call(holder4);
+    //         assert.strictEqual(_balance3.toNumber(), 200);
+    //         let _allowance3 = await token
+    //             .allowance
+    //             .call(holder1, holder2);
+    //         assert.strictEqual(_allowance3.toNumber(), 600);
+    //         let _balance4 = await token
+    //             .balanceOf
+    //             .call(holder1);
+    //         assert.strictEqual(_balance4.toNumber(), 600);
+    //     });
+
+    //     it('Approve max (2^256 - 1)', async () => {
+    //         let token = await TOKEN.new(owner);
+    //         await token.approve(holder1, '115792089237316195423570985008687907853269984665640564039457584007913129639935', {
+    //             from: holder2
+    //         });
+    //         let _allowance = await token.allowance(holder2, holder1);
+    //         //console.log("allowance " + _allowance.toNumber());
+    //         let result = _allowance.toString() === ('115792089237316195423570985008687907853269984665640564039457584007913129639935');
+    //         assert.isTrue(result);
+    //     });
+
+
+    //     it('approves: Holder1 approves Holder2 of 1000 & withdraws 800 & 500 (2nd tx should fail)',
+    //         async () => {
+
+    //             await token.approve(holder2, transferFunds, {
+    //                 from: holder1
+    //             });
+    //             let _allowance1 = await token
+    //                 .allowance
+    //                 .call(holder1, holder2);
+    //             assert.strictEqual(_allowance1.toNumber(), transferFunds);
+    //             await token.transferFrom(holder1, holder3, 800, {
+    //                 from: holder2
+    //             });
+    //             let _balance1 = await token
+    //                 .balanceOf
+    //                 .call(holder3);
+    //             assert.strictEqual(_balance1.toNumber(), 800);
+    //             let _allowance2 = await token
+    //                 .allowance
+    //                 .call(holder1, holder2);
+    //             assert.strictEqual(_allowance2.toNumber(), 200);
+    //             let _balance2 = await token
+    //                 .balanceOf
+    //                 .call(holder1);
+    //             assert.strictEqual(_balance2.toNumber(), 200);
+    //             try {
+    //                 await token.transferFrom(holder1, holder3, 500, {
+    //                     from: holder2
+    //                 });
+    //                 expectRevert();
+    //             } catch (error) {
+    //                 ensureException(error);
+    //             }
+    //         });
+
+    // });
+
+    // describe("transferFrom", async () => {
+    //     it('transferFrom: Attempt to  withdraw from account with no allowance  -- fail', async () => {
+
+
+    //         try {
+    //             await token
+    //                 .transferFrom
+    //                 .call(holder1, holder3, 100, {
+    //                     from: holder2
+    //                 });
+    //             expectRevert();
+    //         } catch (error) {
+    //             ensureException(error);
+    //         }
+    //     });
+
+    //     it('transferFrom: Allow holder2 1000 to withdraw from holder1. Withdraw 800 and then approve 0 & attempt transfer',
+    //         async () => {
+
+    //             await token.approve(holder2, transferFunds, {
+    //                 from: holder1
+    //             });
+    //             let _allowance1 = await token
+    //                 .allowance
+    //                 .call(holder1, holder2);
+    //             assert.strictEqual(_allowance1.toNumber(), transferFunds);
+    //             await token.transferFrom(holder1, holder3, 200, {
+    //                 from: holder2
+    //             });
+    //             let _balance1 = await token
+    //                 .balanceOf
+    //                 .call(holder3);
+    //             assert.strictEqual(_balance1.toNumber(), 200);
+    //             let _allowance2 = await token
+    //                 .allowance
+    //                 .call(holder1, holder2);
+    //             assert.strictEqual(_allowance2.toNumber(), 800);
+    //             let _balance2 = await token
+    //                 .balanceOf
+    //                 .call(holder1);
+    //             assert.strictEqual(_balance2.toNumber(), 800);
+    //             await token.approve(holder2, 0, {
+    //                 from: holder1
+    //             });
+    //             try {
+    //                 await token.transferFrom(holder1, holder3, 200, {
+    //                     from: holder2
+    //                 });
+    //                 expectRevert();
+    //             } catch (error) {
+    //                 ensureException(error);
+    //             }
+    //         });
+
+    //     it('transferFrom: should fail when transferring to user who is locked', async () => {
+
+    //         // await token.mint(holder1, transferFunds, { from: owner });
+
+    //         await token.approve(holder2, transferFunds, {
+    //             from: holder1
+    //         });
+
+    //         await token.addLock(holder3, { from: owner })
+
+    //         try {
+
+    //             await token.transferFrom(holder1, holder3, transferFunds, {
+    //                 from: holder2
+    //             });
+
+    //             expectRevert();
+    //         } catch (error) {
+    //             ensureException(error);
+    //         }
+    //     });
+
+    //     it('transferFrom: should fail when transferring from user who is locked', async () => {
+
+    //         await token.approve(holder2, transferFunds, {
+    //             from: holder1
+    //         });
+
+    //         await token.addLock(holder1, { from: owner })
+
+    //         try {
+
+    //             await token.transferFrom(holder1, holder3, transferFunds, {
+    //                 from: holder2
+    //             });
+    //             expectRevert();
+
+    //         } catch (error) {
+    //             ensureException(error);
+    //         }
+    //     });
+    // });
+
+
+    // describe("burn", async () => {
+
+    //     it('burn: Burn 1000 tokens in owner account successfully', async () => {
+
+    //         let balance = await token.balanceOf(owner);
+
+    //         let numberToCompare = BigNumber(balance.toString()).minus(allowedAmount.toString()).toString()
+    //         // assert.equal(balance, transferFunds);
+    //         await token.burn(allowedAmount, {
+    //             from: owner
+    //         });
+
+    //         balance = await token.balanceOf(owner);
+    //         assert.equal(balance.toString(), numberToCompare);
+    //     })
+
+    //     it('burn: Burn 1000 tokens in locked user account should fail', async () => {
+
+    //         await token.addLock(holder1, { from: owner })
+
+    //         try {
+    //             await token.burn(transferFunds, {
+    //                 from: holder1
+    //             });
+    //             expectRevert();
+    //         } catch (error) {
+    //             ensureException(error);
+    //         }
+    //     })
+
+
+
+    //     it('burn: Burn 1000 tokens in holder1 account should fail. No tokens available', async () => {
 
-        it('burn: Burn 1000 tokens in owner account successfully', async () => {
+
+    //         try {
+    //             await token.burn(transferFunds + 1, {
+    //                 from: holder1
+    //             });
+    //             expectRevert();
+    //         } catch (error) {
+    //             ensureException(error);
+    //         }
+    //     })
+
+
+
+    // })
 
-            let balance = await token.balanceOf(owner);
 
-            let numberToCompare = BigNumber(balance.toString()).minus(allowedAmount.toString()).toString()
-            // assert.equal(balance, transferFunds);
-            await token.burn(allowedAmount, {
-                from: owner
-            });
+    // describe("burnFrom", async () => {
+
+    //     it('burnFrom: Burn 1000 tokens by holder1 in owner account successfully', async () => {
+
+    //         let balance = await token.balanceOf(owner);
+
+    //         let numberTocompare = BigNumber(balance.toString()).minus(allowedAmount.toString()).toString()
+
+    //         await token.approve(holder1, allowedAmount, {
+    //             from: owner
+    //         });
+
+    //         await token.burnFrom(owner, allowedAmount, {
+    //             from: holder1
+    //         });
 
-            balance = await token.balanceOf(owner);
-            assert.equal(balance.toString(), numberToCompare);
-        })
+    //         balance = await token.balanceOf(owner);
 
-        it('burn: Burn 1000 tokens in locked user account should fail', async () => {
+    //         assert.equal(balance.toString(), numberTocompare);
 
-            await token.addLock(holder1, { from: owner })
+    //     })
 
-            try {
-                await token.burn(transferFunds, {
-                    from: holder1
-                });
-                expectRevert();
-            } catch (error) {
-                ensureException(error);
-            }
-        })
+    //     it('burnFrom: Burn 1000 tokens by holder2 in owner account should fail', async () => {
 
+    //         await token.approve(holder1, transferFunds, {
+    //             from: owner
+    //         });
 
+    //         try {
+    //             await token.burnFrom(owner, transferFunds, {
+    //                 from: holder2
+    //             });
+    //             expectRevert();
+    //         } catch (error) {
+    //             ensureException(error);
+    //         }
 
-        it('burn: Burn 1000 tokens in holder1 account should fail. No tokens available', async () => {
+    //     })
 
+    //     it('burnFrom: Burn 1001 tokens by holder1 in owner account should fail', async () => {
 
-            try {
-                await token.burn(transferFunds + 1, {
-                    from: holder1
-                });
-                expectRevert();
-            } catch (error) {
-                ensureException(error);
-            }
-        })
 
+    //         await token.approve(holder1, transferFunds, {
+    //             from: owner
+    //         });
+    //         try {
+    //             await token.burnFrom(owner, transferFunds + 1, {
+    //                 from: holder1
+    //             });
+    //             expectRevert();
+    //         } catch (error) {
+    //             ensureException(error);
+    //         }
+    //     })
 
+    // })
 
-    })
 
 
-    describe("burnFrom", async () => {
+    // describe("Locked", async () => {
 
-        it('burnFrom: Burn 1000 tokens by holder1 in owner account successfully', async () => {
+    //     it('addLock: It should lock user ', async () => {
 
-            let balance = await token.balanceOf(owner);
+    //         // await token.setController(holder1, { from: owner })
+    //         await token.grantRole(CONTROLLER_ROLE, holder1, { from: owner });
 
-            let numberTocompare = BigNumber(balance.toString()).minus(allowedAmount.toString()).toString()
 
-            await token.approve(holder1, allowedAmount, {
-                from: owner
-            });
+    //         await token.addLock(holder2, {
+    //             from: holder1
+    //         });
 
-            await token.burnFrom(owner, allowedAmount, {
-                from: holder1
-            });
+    //         let result = await token.isLocked(holder2, {
+    //             from: owner
+    //         });
+    //         assert.isTrue(result);
+    //     })
 
-            balance = await token.balanceOf(owner);
+    //     it('removeLock: It should unlock user', async () => {
 
-            assert.equal(balance.toString(), numberTocompare);
+    //         // await token.setController(holder1, { from: owner })
+    //         await token.grantRole(CONTROLLER_ROLE, holder1, { from: owner });
 
-        })
 
-        it('burnFrom: Burn 1000 tokens by holder2 in owner account should fail', async () => {
+    //         await token.addLock(holder2, {
+    //             from: holder1
+    //         });
 
-            await token.approve(holder1, transferFunds, {
-                from: owner
-            });
+    //         await token.removeLock(holder2, {
+    //             from: holder1
+    //         });
 
-            try {
-                await token.burnFrom(owner, transferFunds, {
-                    from: holder2
-                });
-                expectRevert();
-            } catch (error) {
-                ensureException(error);
-            }
+    //         let result = await token.isLocked(holder2, {
+    //             from: owner
+    //         });
+    //         assert.isFalse(result);
+    //     })
 
-        })
 
-        it('burnFrom: Burn 1001 tokens by holder1 in owner account should fail', async () => {
+    //     it('addLock: It should fail when locking user by unauthorized user', async () => {
+    //         try {
+    //             await token.addLock(holder1, {
+    //                 from: holder2
+    //             });
+    //             expectRevert();
+    //         } catch (error) {
+    //             ensureException(error);
+    //         }
+    //     })
 
 
-            await token.approve(holder1, transferFunds, {
-                from: owner
-            });
-            try {
-                await token.burnFrom(owner, transferFunds + 1, {
-                    from: holder1
-                });
-                expectRevert();
-            } catch (error) {
-                ensureException(error);
-            }
-        })
+    // })
 
-    })
 
 
+    // describe('events', async () => {
 
-    describe("Locked", async () => {
+    //     it('should log LogControllerSet event after setController', async () => {
 
-        it('addLock: It should lock user ', async () => {
+    //         let result = await token.grantRole(CONTROLLER_ROLE, holder1, { from: owner });
 
-            // await token.setController(holder1, { from: owner })
-            await token.grantRole(CONTROLLER_ROLE, holder1, { from: owner });
 
+    //         assert.lengthOf(result.logs, 1);
+    //         let event = result.logs[0];
+    //         assert.equal(event.event, 'RoleGranted');
+    //         assert.equal(event.args.account, holder1);
+    //     })
 
-            await token.addLock(holder2, {
-                from: holder1
-            });
 
-            let result = await token.isLocked(holder2, {
-                from: owner
-            });
-            assert.isTrue(result);
-        })
+    //     it('should log LogControllerRevoked event after revokeController', async () => {
 
-        it('removeLock: It should unlock user', async () => {
+    //         // await token.setController(holder1, {
+    //         //     from: owner
+    //         // });
 
-            // await token.setController(holder1, { from: owner })
-            await token.grantRole(CONTROLLER_ROLE, holder1, { from: owner });
+    //         await token.grantRole(CONTROLLER_ROLE, holder1, { from: owner });
 
 
-            await token.addLock(holder2, {
-                from: holder1
-            });
+    //         let result = await token.revokeRole(CONTROLLER_ROLE, holder1, {
+    //             from: owner
+    //         });
 
-            await token.removeLock(holder2, {
-                from: holder1
-            });
+    //         assert.lengthOf(result.logs, 1);
+    //         let event = result.logs[0];
+    //         assert.equal(event.event, 'RoleRevoked');
+    //         assert.equal(event.args.account, holder1);
+    //     })
 
-            let result = await token.isLocked(holder2, {
-                from: owner
-            });
-            assert.isFalse(result);
-        })
 
+    //     it('should log Transfer event after transfer()', async () => {
 
-        it('addLock: It should fail when locking user by unauthorized user', async () => {
-            try {
-                await token.addLock(holder1, {
-                    from: holder2
-                });
-                expectRevert();
-            } catch (error) {
-                ensureException(error);
-            }
-        })
+    //         // token = await TOKEN.new(owner);
+    //         let result = await token.transfer(holder3, transferFunds, {
+    //             from: owner
+    //         });
 
 
-    })
+    //         assert.lengthOf(result.logs, 1);
+    //         let event = result.logs[0];
+    //         assert.equal(event.event, 'Transfer');
+    //         assert.equal(event.args.from, owner);
+    //         assert.equal(event.args.to, holder3);
+    //         assert.equal(Number(event.args.value), transferFunds);
+    //     });
 
+    //     it('should log Transfer and Approve events after transferFrom()', async () => {
 
+    //         await token.approve(holder1, allowedAmount, {
+    //             from: owner
+    //         });
 
-    describe('events', async () => {
+    //         let value = allowedAmount / 2;
+    //         let result = await token.transferFrom(owner, holder2, value, {
+    //             from: holder1,
+    //         });
+    //         assert.lengthOf(result.logs, 2);
+    //         let event1 = result.logs[0];
+    //         assert.equal(event1.event, 'Transfer');
+    //         assert.equal(event1.args.from, owner);
+    //         assert.equal(event1.args.to, holder2);
+    //         assert.equal(Number(event1.args.value), value);
+    //         let event2 = result.logs[1];
+    //         assert.equal(event2.event, 'Approval');
+    //         assert.equal(event2.args.owner, owner);
+    //         assert.equal(event2.args.spender, holder1);
+    //         assert.equal(Number(event2.args.value), allowedAmount - value);
 
-        it('should log LogControllerSet event after setController', async () => {
+    //     });
 
-            let result = await token.grantRole(CONTROLLER_ROLE, holder1, { from: owner });
+    //     it('should log Approve event after approve()', async () => {
 
+    //         let result = await token.approve(holder1, allowedAmount, {
+    //             from: owner
+    //         });
 
-            assert.lengthOf(result.logs, 1);
-            let event = result.logs[0];
-            assert.equal(event.event, 'RoleGranted');
-            assert.equal(event.args.account, holder1);
-        })
+    //         assert.lengthOf(result.logs, 1);
+    //         let event = result.logs[0];
+    //         assert.equal(event.event, 'Approval');
+    //         assert.equal(event.args.spender, holder1);
+    //         assert.equal(Number(event.args.value), allowedAmount);
+    //     });
 
 
-        it('should log LogControllerRevoked event after revokeController', async () => {
+    //     it('should log Transfer event after burn()', async () => {
 
-            // await token.setController(holder1, {
-            //     from: owner
-            // });
+    //         let result = await token.burn(transferFunds, {
+    //             from: owner
+    //         });
 
-            await token.grantRole(CONTROLLER_ROLE, holder1, { from: owner });
+    //         assert.lengthOf(result.logs, 1);
+    //         let event = result.logs[0];
+    //         assert.equal(event.event, 'Transfer');
+    //         assert.equal(event.args.from, owner);
+    //         assert.equal(event.args.to, "0x0000000000000000000000000000000000000000");
+    //         assert.equal(Number(event.args.value), transferFunds);
+    //     });
 
+    //     it('should log Transfer and Approve event after burnFrom()', async () => {
 
-            let result = await token.revokeRole(CONTROLLER_ROLE, holder1, {
-                from: owner
-            });
+    //         await token.approve(holder1, allowedAmount, {
+    //             from: owner
+    //         });
 
-            assert.lengthOf(result.logs, 1);
-            let event = result.logs[0];
-            assert.equal(event.event, 'RoleRevoked');
-            assert.equal(event.args.account, holder1);
-        })
+    //         let value = allowedAmount / 2;
+    //         let result = await token.burnFrom(owner, value, {
+    //             from: holder1
+    //         });
 
+    //         assert.lengthOf(result.logs, 2);
 
-        it('should log Transfer event after transfer()', async () => {
+    //         let event1 = result.logs[1];
+    //         assert.equal(event1.event, 'Transfer');
+    //         assert.equal(event1.args.from, owner);
+    //         assert.equal(event1.args.to, "0x0000000000000000000000000000000000000000");
+    //         assert.equal(Number(event1.args.value), value);
+    //         let event2 = result.logs[0];
+    //         assert.equal(event2.event, 'Approval');
+    //         assert.equal(event2.args.owner, owner);
+    //         assert.equal(event2.args.spender, holder1);
+    //         assert.equal(Number(event2.args.value), allowedAmount - value);
+    //     });
 
-            // token = await TOKEN.new(owner);
-            let result = await token.transfer(holder3, transferFunds, {
-                from: owner
-            });
 
+    //     it('should log RoleGranted to new admin)', async () => {
 
-            assert.lengthOf(result.logs, 1);
-            let event = result.logs[0];
-            assert.equal(event.event, 'Transfer');
-            assert.equal(event.args.from, owner);
-            assert.equal(event.args.to, holder3);
-            assert.equal(Number(event.args.value), transferFunds);
-        });
+    //         let result = await token.grantRole(DEFAULT_ADMIN_ROLE, holder1, {
+    //             from: owner
+    //         });
 
-        it('should log Transfer and Approve events after transferFrom()', async () => {
+    //         assert.lengthOf(result.logs, 1);
 
-            await token.approve(holder1, allowedAmount, {
-                from: owner
-            });
+    //         let event = result.logs[0];
+    //         assert.equal(event.event, 'RoleGranted');
+    //         assert.equal(event.args.account, holder1);
+    //     })
 
-            let value = allowedAmount / 2;
-            let result = await token.transferFrom(owner, holder2, value, {
-                from: holder1,
-            });
-            assert.lengthOf(result.logs, 2);
-            let event1 = result.logs[0];
-            assert.equal(event1.event, 'Transfer');
-            assert.equal(event1.args.from, owner);
-            assert.equal(event1.args.to, holder2);
-            assert.equal(Number(event1.args.value), value);
-            let event2 = result.logs[1];
-            assert.equal(event2.event, 'Approval');
-            assert.equal(event2.args.owner, owner);
-            assert.equal(event2.args.spender, holder1);
-            assert.equal(Number(event2.args.value), allowedAmount - value);
 
-        });
 
-        it('should log Approve event after approve()', async () => {
 
-            let result = await token.approve(holder1, allowedAmount, {
-                from: owner
-            });
 
-            assert.lengthOf(result.logs, 1);
-            let event = result.logs[0];
-            assert.equal(event.event, 'Approval');
-            assert.equal(event.args.spender, holder1);
-            assert.equal(Number(event.args.value), allowedAmount);
-        });
+    //     it('should log AddedLock after addLock()', async () => {
 
+    //         let result = await token.addLock(holder1, {
+    //             from: owner
+    //         });
 
-        it('should log Transfer event after burn()', async () => {
+    //         assert.lengthOf(result.logs, 1);
+    //         let event = result.logs[0];
+    //         assert.equal(event.event, 'AddedLock');
+    //         assert.equal(event.args.user, holder1);
+    //     })
 
-            let result = await token.burn(transferFunds, {
-                from: owner
-            });
+    //     it('should log Removedlock after removeLock()', async () => {
 
-            assert.lengthOf(result.logs, 1);
-            let event = result.logs[0];
-            assert.equal(event.event, 'Transfer');
-            assert.equal(event.args.from, owner);
-            assert.equal(event.args.to, "0x0000000000000000000000000000000000000000");
-            assert.equal(Number(event.args.value), transferFunds);
-        });
+    //         await token.addLock(holder1, {
+    //             from: owner
+    //         });
 
-        it('should log Transfer and Approve event after burnFrom()', async () => {
+    //         let result = await token.removeLock(holder1, {
+    //             from: owner
+    //         });
 
-            await token.approve(holder1, allowedAmount, {
-                from: owner
-            });
+    //         assert.lengthOf(result.logs, 1);
+    //         let event = result.logs[0];
+    //         assert.equal(event.event, 'RemovedLock');
+    //         assert.equal(event.args.user, holder1);
+    //     })
 
-            let value = allowedAmount / 2;
-            let result = await token.burnFrom(owner, value, {
-                from: holder1
-            });
-
-            assert.lengthOf(result.logs, 2);
-
-            let event1 = result.logs[1];
-            assert.equal(event1.event, 'Transfer');
-            assert.equal(event1.args.from, owner);
-            assert.equal(event1.args.to, "0x0000000000000000000000000000000000000000");
-            assert.equal(Number(event1.args.value), value);
-            let event2 = result.logs[0];
-            assert.equal(event2.event, 'Approval');
-            assert.equal(event2.args.owner, owner);
-            assert.equal(event2.args.spender, holder1);
-            assert.equal(Number(event2.args.value), allowedAmount - value);
-        });
-
-
-        it('should log RoleGranted to new admin)', async () => {
-
-            let result = await token.grantRole(DEFAULT_ADMIN_ROLE, holder1, {
-                from: owner
-            });
-
-            assert.lengthOf(result.logs, 1);
-
-            let event = result.logs[0];
-            assert.equal(event.event, 'RoleGranted');
-            assert.equal(event.args.account, holder1);
-        })
-
-
-
-
-
-        it('should log AddedLock after addLock()', async () => {
-
-            let result = await token.addLock(holder1, {
-                from: owner
-            });
-
-            assert.lengthOf(result.logs, 1);
-            let event = result.logs[0];
-            assert.equal(event.event, 'AddedLock');
-            assert.equal(event.args.user, holder1);
-        })
-
-        it('should log Removedlock after removeLock()', async () => {
-
-            await token.addLock(holder1, {
-                from: owner
-            });
-
-            let result = await token.removeLock(holder1, {
-                from: owner
-            });
-
-            assert.lengthOf(result.logs, 1);
-            let event = result.logs[0];
-            assert.equal(event.event, 'RemovedLock');
-            assert.equal(event.args.user, holder1);
-        })
-
-    })
+    // })
 })
