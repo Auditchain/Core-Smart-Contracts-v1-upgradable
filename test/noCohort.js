@@ -150,6 +150,8 @@ contract("NoCohort Validations contract", (accounts) => {
 
         documentHash = web3.utils.soliditySha3(documentURL);
         await memberHelpers.grantRole(CONTROLLER_ROLE, validation.address, { from: admin });
+        await queue.grantRole(CONTROLLER_ROLE, validation.address, { from: admin });
+        await queue.grantRole(CONTROLLER_ROLE, validationHelpers.address, { from: admin });
 
     })
 
@@ -314,9 +316,9 @@ contract("NoCohort Validations contract", (accounts) => {
             let earned3 = BN(depositAmountAfter3.toString()).minus(BN(depositAmountBefore3.toString()));
             let earned4 = BN(depositAmountAfter4.toString()).minus(BN(depositAmountBefore4.toString()));
 
-            let fee = await nodeOperations.POWFee();
+            // let fee = await ;
             let total = BN(earned1.toString()).add(BN(earned2.toString()).add(BN(earned3.toString()).add(BN(earned4.toString()))));
-            assert.strictEqual(total.toString(), fee.toString());
+            assert.strictEqual(total.toString(), price.toString());
 
         })
 
@@ -412,7 +414,7 @@ contract("NoCohort Validations contract", (accounts) => {
         let validationInitTime;
         let validationHash
 
-        let count=0;
+        let count=10;
         let documentHash
         
         beforeEach(async () => {
@@ -456,7 +458,7 @@ contract("NoCohort Validations contract", (accounts) => {
             let result = await validation.initializeValidationNoCohort(documentHash, documentURL, 1, price, { from: dataSubscriber });
             let event = result.logs[0];
 
-            result = await validation.replaceCancelValidation(replacementPrice, event.args.validationHash, { from: dataSubscriber });
+            result = await validationHelpers.replaceCancelValidation(replacementPrice, event.args.validationHash, validation.address, { from: dataSubscriber });
             event = result.logs[0];
 
             assert.strictEqual(event.args.price.toString(), replacementPrice);
@@ -469,7 +471,7 @@ contract("NoCohort Validations contract", (accounts) => {
             let event = result.logs[0];
 
             try {
-                await validation.replaceCancelValidation(replacementPrice, event.args.validationHash, { from: validator1 });
+                await validationHelpers.replaceCancelValidation(replacementPrice, event.args.validationHash, validation.address, { from: validator1 });
 
                 expectRevert();
             } catch (error) {
@@ -484,7 +486,7 @@ contract("NoCohort Validations contract", (accounts) => {
             let result = await validation.initializeValidationNoCohort(documentHash, documentURL, 1, price, { from: dataSubscriber });
             let event = result.logs[0];
 
-            result = await validation.replaceCancelValidation(0, event.args.validationHash, { from: dataSubscriber });
+            result = await validationHelpers.replaceCancelValidation(0, event.args.validationHash, validation.address, { from: dataSubscriber });
             event = result.logs[0];
 
             assert.strictEqual(event.args.price.toString(), "0");
@@ -497,7 +499,7 @@ contract("NoCohort Validations contract", (accounts) => {
             let event = result.logs[0];
 
             try {
-                await validation.replaceCancelValidation(0, event.args.validationHash, { from: validator1 });
+                await validationHelpers.replaceCancelValidation(0, event.args.validationHash, validation.address, { from: validator1 });
 
                 expectRevert();
             } catch (error) {
