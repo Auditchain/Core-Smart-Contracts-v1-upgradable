@@ -142,9 +142,9 @@ module.exports = async function (deployer, network, accounts) { // eslint-disabl
 
 
 
-  await deployProxy(Cohort, [members.address, memberHelpers.address, cohortFactory.address, depositModifiers.address, nodeOperations.address,   validationHelpers.address, queue.address], { deployer, initializer: 'initialize' });
-  let cohort = await Cohort.deployed();
-  console.log("cohort address:", cohort.address);
+  // await deployProxy(Cohort, [members.address, memberHelpers.address, cohortFactory.address, depositModifiers.address, nodeOperations.address,   validationHelpers.address, queue.address], { deployer, initializer: 'initialize' });
+  // let cohort = await Cohort.deployed();
+  // console.log("cohort address:", cohort.address);
 
 
   await deployProxy(NoCohort, [members.address, memberHelpers.address, cohortFactory.address, depositModifiers.address, nodeOperations.address,  validationHelpers.address, queue.address], { deployer, initializer: 'initialize' } );
@@ -155,9 +155,9 @@ module.exports = async function (deployer, network, accounts) { // eslint-disabl
 
 
 
-  // await deployProxy(NFT, ["AuditChain", "Rules"], { deployer, initializer: 'initialize' } );
-  // let nft = await NFT.deployed();
-  // console.log("NFT address:", nft.address);
+  await deployProxy(NFT, ["AuditChain", "Rules", noCohort.address], { deployer, initializer: 'initialize' } );
+  let nft = await NFT.deployed();
+  console.log("NFT address:", nft.address);
 
 
   // await deployer.deploy(Timelock, admin, 5);
@@ -184,7 +184,7 @@ module.exports = async function (deployer, network, accounts) { // eslint-disabl
   // console.log('NODE_OPERATIONS_HELPERS_ADDRESS=' + NodeOperationsHelpers.address);
   // console.log('GOVERNOR_ALPHA_ADDRESS=' + gov.address);
   // console.log('TIMELOCK_ADDRESS=' + timelock.address);
-  // console.log('RULES_NFT_ADDRESS=' + nft.address);
+  console.log('RULES_NFT_ADDRESS=' + nft.address);
 
 
   console.log("\n\n" + "React format:" + "\n\n");
@@ -202,7 +202,7 @@ module.exports = async function (deployer, network, accounts) { // eslint-disabl
   // console.log('"NODE_OPERATIONS_HELPERS_ADDRESS":"' + NodeOperationsHelpers.address + '",');
   // console.log('"GOVERNOR_ALPHA_ADDRESS":"' + gov.address + '",');
   // console.log('"TIMELOCK_ADDRESS":"' + timelock.address + '",');
-  // console.log('"RULES_NFT_ADDRESS":"' + nft.address + '",' + "\n\n");
+  console.log('"RULES_NFT_ADDRESS":"' + nft.address + '",' + "\n\n");
 
 
   // await timelock.setPendingAdmin(gov.address, { from: admin });
