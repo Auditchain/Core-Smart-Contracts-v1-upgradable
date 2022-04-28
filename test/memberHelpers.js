@@ -9,7 +9,7 @@ const MEMBERS = artifacts.require('../Members');
 const MEMBER_HELPERS = artifacts.require('../MemberHelpers')
 const TOKEN = artifacts.require('../AuditToken');
 const COHORTFACTORY = artifacts.require('../CohortFactory');
-const VALIDATION = artifacts.require('../ValidationsCohort');
+const VALIDATION = artifacts.require('../ValidationsNoCohort');
 const NODE_OPERATIONS = artifacts.require('../NodeOperations');
 const DEPOSIT_MODIFIERS = artifacts.require('../DepositModifiers');
 const VALIDATION_HELPERS = artifacts.require('../ValidationHelpers');
@@ -55,7 +55,12 @@ contract("Member Helper contract", (accounts) => {
     let auditTokenLesMin = "1";
     let auditTokenMorMax = "25100000000000000000000";
     let auditTokenMax = "25000000000000000000000";
-    let initialToken = "250000000000000000000000000";
+    let initialToken = "2500000000000000000000000000";
+    let documentHash;
+    const documentURL = "http://xbrlsite.azurewebsites.net/2021/reporting-scheme/proof/reference-implementation/instance.xml";
+    let price = "1000000000000000000";
+
+
 
 
     let rewardTokens = "1000000000000000000";
@@ -78,6 +83,10 @@ contract("Member Helper contract", (accounts) => {
 
         await token.grantRole(MINTER_ROLE, admin, { from: admin });
         await token.mint(admin, initialToken, { from: admin });
+
+        await token.grantRole(MINTER_ROLE, memberHelpers.address, { from: admin });
+
+
 
 
         // token = await TOKEN.new(admin);
@@ -106,6 +115,11 @@ contract("Member Helper contract", (accounts) => {
         // await memberHelpers.setValidation(validation.address, {from:admin});
 
         tokenPerValidation = await members.amountTokensPerValidation();
+
+        await token.grantRole(MINTER_ROLE, admin, { from: admin });
+        await token.mint(admin, initialToken, { from: admin });
+        await queue.grantRole(CONTROLLER_ROLE, validation.address, { from: admin });
+
 
 
         // await memberHelpers.setCohortFactory(cohortFactory.address, { from: admin });
@@ -147,7 +161,7 @@ contract("Member Helper contract", (accounts) => {
         it("Should fail. Validation address has been set by authorized user, but with address 0", async () => {
 
             try {
-                await memberHelpers.setValidation("0x0000000000000000000000000000000000000000", { from:admin });
+                await memberHelpers.setValidation("0x0000000000000000000000000000000000000000", { from: admin });
 
                 expectRevert()
             } catch (error) {
@@ -159,7 +173,7 @@ contract("Member Helper contract", (accounts) => {
 
     describe("Stake by validators", async () => {
 
-        beforeEach(async () => {
+        before(async () => {
 
             // await members.addValidatorUser(validator1, "Validators 1", { from: admin });
             const result = await members.addUser(validator1, "Validator 1", 1, { from: admin });
@@ -219,7 +233,7 @@ contract("Member Helper contract", (accounts) => {
 
     describe("Deposit by Enterprise", async () => {
 
-        beforeEach(async () => {
+        before(async () => {
 
             await members.addUser(enterprise1, "Enterprise 1", 0, { from: admin });
 
@@ -248,139 +262,4 @@ contract("Member Helper contract", (accounts) => {
         })
     })
 
-
-    describe("Process earnings", async () => {
-
-        let cohortAddress;
-        let cohortContract;
-
-        beforeEach(async () => {
-
-            await members.addUser(enterprise1, "Enterprise 1", 0, { from: admin });
-            await members.addUser(validator1, "Validators 1", 1, { from: admin });
-            await members.addUser(validator2, "Validators 2", 1, { from: admin });
-            await members.addUser(validator3, "Validators 3", 1, { from: admin });
-
-            await token.transfer(validator1, auditTokenMin, { from: admin });
-            await token.transfer(validator2, auditTokenMin, { from: admin });
-            await token.transfer(validator3, auditTokenMin, { from: admin });
-            await token.transfer(enterprise1, auditTokenMin, { from: admin });
-
-
-            await token.approve(memberHelpers.address, auditTokenMin, { from: validator1 });
-            await token.approve(memberHelpers.address, auditTokenMin, { from: validator2 });
-            await token.approve(memberHelpers.address, auditTokenMin, { from: validator3 });
-            await token.approve(memberHelpers.address, auditTokenMin, { from: enterprise1 });
-
-
-            await memberHelpers.stake(auditTokenMin, { from: validator1 });
-            await memberHelpers.stake(auditTokenMin, { from: validator2 });
-            await memberHelpers.stake(auditTokenMin, { from: validator3 });
-            await memberHelpers.stake(auditTokenMin, { from: enterprise1 });
-
-            await nodeOperations.toggleNodeOperator({ from: validator1 });
-            await nodeOperations.toggleNodeOperator({ from: validator2 });
-            await nodeOperations.toggleNodeOperator({ from: validator3 });
-
-            // await cohortFactory.inviteValidator(validator1, 1, { from: enterprise1 });
-            // await cohortFactory.inviteValidator(validator2, 1, { from: enterprise1 });
-            // await cohortFactory.inviteValidator(validator3, 1, { from: enterprise1 });
-
-            await cohortFactory.inviteValidatorMultiple([validator1, validator2, validator3], 1, { from: enterprise1 });
-
-
-            await cohortFactory.acceptInvitation(enterprise1, 0, { from: validator1 });
-            await cohortFactory.acceptInvitation(enterprise1, 1, { from: validator2 });
-            await cohortFactory.acceptInvitation(enterprise1, 2, { from: validator3 });
-
-            await cohortFactory.createCohort(1, { from: enterprise1 });
-            let validatorList = await cohortFactory.returnValidatorList(enterprise1, 1);
-
-            const isInvited = await cohortFactory.isValidatorInvited(enterprise1, validator1, 1);
-
-            let documentHash = web3.utils.soliditySha3("2+1=4");
-            let result = await validation.initializeValidationCohort(documentHash, '', 1, { from: enterprise1 });
-
-
-            let event = result.logs[0];
-            let validationInitTime = event.args.initTime;
-
-            // await validation.validate(documentHash, validationInitTime, enterprise1, 1, "", documentHash, { from: validator1, gas: 900000 });
-
-
-            await validation.validate(documentHash, validationInitTime, enterprise1, 1, "", documentHash, { from: validator1, gas: 900000 });
-            await validation.validate(documentHash, validationInitTime, enterprise1, 1, "", documentHash, { from: validator2, gas: 900000 });
-            await validation.validate(documentHash, validationInitTime, enterprise1, 1, "", documentHash, { from: validator3, gas: 900000 });
-
-        })
-
-        it("Should succeed. Claim rewards by validator who has earned some funds. ", async () => {
-
-            let balanceBefore = await memberHelpers.returnDepositAmount(validator1);
-            let enterpriseMatch = await members.enterpriseMatch();
-            let enterprisePortion = new BigNumber(tokenPerValidation.toString()).mult(enterpriseMatch.toString()).div(10000);
-            let stakeAmount = (await nodeOperations.nodeOpStruct(validator1)).stakeAmount;
-
-            let stakeRatio = await nodeOperations.stakeRatio();
-            let stake = await  memberHelpers.returnDepositAmount(validator3);
-
-
-            await nodeOperations.claimStakeRewards(false, {from:validator1});
-
-            let balanceBeforeRedeem = await memberHelpers.returnDepositAmount(validator1);
-
-            let result = await memberHelpers.redeem(new BigNumber(stakeAmount.toString()).add(auditTokenMin), { from: validator1 });
-
-            let event = result.logs[0];
-            let amount = event.args.amount;
-
-            let balanceAfter = await memberHelpers.returnDepositAmount(validator1);
-            assert.strictEqual(balanceAfter.toString(), new BigNumber(balanceBefore.toString()).add(stakeAmount.toString()).subtract(amount.toString()).toString());
-        })
-
-        it("Should fail. Claim rewards by validator who has no funds. ", async () => {
-
-            try {
-                await memberHelpers.redeem(auditTokenMin, { from: validator4 });
-                expectRevert()
-
-            } catch (error) {
-                ensureException(error);
-            }
-        })
-
-        it("Should succeed. Enterprise can withdraw funds minus obligation to cover payments since recent update. ", async () => {
-
-            let documentHash = web3.utils.soliditySha3("2+1=4");
-            await validation.initializeValidationCohort(documentHash, '', 1, { from: enterprise1 });
-
-
-            let balanceBefore = await memberHelpers.returnDepositAmount(enterprise1);
-            let outstandingValidations = await validation.outstandingValidations(enterprise1);
-            let enterpriseMatch = await members.enterpriseMatch();
-
-            let fundsForOutstandingValidations = new BigNumber(tokenPerValidation.toString()).mult(enterpriseMatch.toString()).mult(outstandingValidations.toString()).div(10000);
-
-            let fundsAvailableForWithdrawal = new BigNumber(balanceBefore.toString()).subtract(fundsForOutstandingValidations.toString());
-            await memberHelpers.redeem(fundsAvailableForWithdrawal, { from: enterprise1 });
-
-            let balanceAfter = await memberHelpers.returnDepositAmount(enterprise1);
-            assert.strictEqual(balanceAfter.toString(), fundsForOutstandingValidations.toString());
-
-        })
-
-        it("Should fail. Enterprise withdraws funds above obligation to cover payments since recent update. ", async () => {
-
-            let balanceBefore = await memberHelpers.returnDepositAmount(enterprise1);
-            let documentHash = web3.utils.soliditySha3("2+1=4");
-            await validation.initializeValidationCohort(documentHash, '', 1, { from: enterprise1 });
-
-            try {
-                await memberHelpers.redeem(balanceBefore, { from: enterprise1 });
-                expectRevert()
-            } catch (error) {
-                ensureException(error);
-            }
-        })
-    })
 })
