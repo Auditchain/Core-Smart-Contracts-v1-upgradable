@@ -9,8 +9,8 @@ import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 contract ValidationsNoCohort is Validations {
     using SafeMathUpgradeable for uint256;
 
-    function initialize(address _members, address _memberHelpers, address _cohortFactory, address _depositModifiers, address _nodeOperations, address _nodeOperationsHelpers,  address _validationHelpers) public override {
-        super.initialize(_members, _memberHelpers, _cohortFactory, _depositModifiers, _nodeOperations, _nodeOperationsHelpers, _validationHelpers);
+    function initialize(address _members, address _memberHelpers, address _cohortFactory, address _depositModifiers, address _nodeOperations,  address _validationHelpers, address _queue) public override {
+        super.initialize(_members, _memberHelpers, _cohortFactory, _depositModifiers, _nodeOperations, _validationHelpers, _queue);
 
     }
 
@@ -20,11 +20,11 @@ contract ValidationsNoCohort is Validations {
     * @param url - locatoin of the file on IPFS or   function returnValidatorList(bytes32 validationHash) public view override  returns (address[] memory){
     * @param auditType - type of auditing 
     */
-    function initializeValidationNoCohort(bytes32 documentHash, string memory url, AuditTypes auditType) public {
+    function initializeValidationNoCohort(bytes32 documentHash, string memory url, AuditTypes auditType, uint256 price) public {
 
-        require(checkIfRequestorHasFunds(msg.sender), "ValidationsNoCohort:initializeValidationNoCohort - Not sufficient funds. Deposit additional funds.");
-        require(members.userMap(msg.sender, Members.UserType(2)), "ValidationsNoCohort:initializeValidationNoCohort - You have to register as data subscriber");
-        super.initializeValidation(documentHash, url, auditType, false);
+        require(checkIfRequestorHasFunds(msg.sender, price), "ValidationsNoCohort:initializeValidationNoCohort - Not sufficient funds. Deposit additional funds.");
+        require(members.userMap(msg.sender, IMembers.UserType(2)), "ValidationsNoCohort:initializeValidationNoCohort - You have to register as data subscriber");
+        super.initializeValidation(documentHash, url, auditType, false, price);
         
     }
 
@@ -33,15 +33,9 @@ contract ValidationsNoCohort is Validations {
    * @param requestor a user whos funds are checked
    * @return true or false 
    */
-      function checkIfRequestorHasFunds(address requestor) public override view returns (bool) {
+      function checkIfRequestorHasFunds(address requestor, uint256 price) public override view returns (bool) {
 
-       if (memberHelpers.deposits(requestor) == 0)
-            return false;
-       else if (outstandingValidations[requestor] > 0 )
-       
-          return ( memberHelpers.deposits(requestor) > nodeOperationsHelpers.POWFee().mul(outstandingValidations[requestor]));
-       else 
-          return true;
+          return ( memberHelpers.deposits(requestor) > price.mul(outstandingValidations[requestor].add(1)));
     }
 
 
@@ -49,7 +43,7 @@ contract ValidationsNoCohort is Validations {
 
         Validation storage validation = validations[validationHash];
         outstandingValidations[validation.requestor] = outstandingValidations[validation.requestor].sub(1);
-        depositModifiers.processNonChortPayment(winner, validation.requestor, validationHash);
+        depositModifiers.processNonChortPayment(winner, validation.requestor, validationHash, validation.price);
         emit PaymentProcessed(validationHash, winner, validation.winnerVotesPlus[winner], validation.winnerVotesMinus[winner]);
     }
 

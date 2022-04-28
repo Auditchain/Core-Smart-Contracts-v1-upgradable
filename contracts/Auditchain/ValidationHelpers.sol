@@ -4,6 +4,8 @@ pragma solidity =0.8.0;
 import "./IValidations.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "./MemberHelpers.sol";
+import "./IQueue.sol";
+
 
 
 
@@ -14,9 +16,15 @@ contract ValidationHelpers {
     // Validation can be approved or disapproved. Initial status is undefined.
     enum ValidationStatus {Undefined, Yes, No}   
     MemberHelpers memberHelpers;
+    IQueue public queue;
 
-    function initialize(address _memberHelpers) public  {
+
+    event ReplaceCancelValidation(address indexed user, bytes32 validationHash, uint256 price);
+
+
+    function initialize(address _memberHelpers, address _queue) public  {
         memberHelpers = MemberHelpers(_memberHelpers);
+        queue = IQueue(_queue);
     }
 
 
@@ -43,6 +51,26 @@ contract ValidationHelpers {
 
     }
 
+
+    /**
+     * @dev replace or cancel existing validation waiting in the queue with different price
+     * @param price - new price, if price is 0 only remove request
+     * @param validationHash validation hash for request
+     */
+    function replaceCancelValidation(uint256 price, bytes32 validationHash, address contractAddress) public {
+        require(validationHash != bytes32(0), "Val:replaceValidation-  Validation Hash can't be 0");
+
+        (,address requestor,,,,,,,,) = IValidations(contractAddress).returnValidationRecord(validationHash);
+
+        // Validation storage val = validations[validationHash];
+        require(msg.sender == requestor , "Val:replaceValidation - not yours");
+        if (price == 0)
+            queue.removeFromQueue(validationHash);
+        else
+            queue.replaceValidation(price, validationHash);
+            
+        emit ReplaceCancelValidation(msg.sender, validationHash, price);
+    }
 
     function selectWinner(bytes32 validationHash, address[] memory winners) public view returns (address) {
 

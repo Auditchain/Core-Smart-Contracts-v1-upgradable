@@ -4,7 +4,8 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
 // import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+
 import "./ICohortFactory.sol";
 import "./../IAuditToken.sol";
 
@@ -55,8 +56,6 @@ contract Members is  AccessControlEnumerableUpgradeable {
     enum UserType {Enterprise, Validator, DataSubscriber}  
     
     event UserAdded(address indexed user, string name, UserType indexed userType);
-    event LogDepositReceived(address indexed from, uint amount);
-    event LogSubscriptionCompleted(address subscriber, uint256 numberOfSubscriptions);
     event LogGovernanceUpdate(uint256 params, string indexed action);
 
     
@@ -175,7 +174,6 @@ contract Members is  AccessControlEnumerableUpgradeable {
         enterpriseShareSubscriber = _enterpriseShareSubscriber;
         validatorShareSubscriber = _validatorShareSubscriber;
         emit LogGovernanceUpdate(enterpriseShareSubscriber, "updateDataSubscriberShares:Enterprise");
-        emit LogGovernanceUpdate(validatorShareSubscriber, "updateDataSubscriberShares:Validator");
     }
 
    

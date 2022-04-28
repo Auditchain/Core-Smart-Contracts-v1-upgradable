@@ -15,10 +15,10 @@ contract MemberHelpers is AccessControlEnumerableUpgradeable {
     using SafeMathUpgradeable for uint256;
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    bytes32 public constant CONTROLLER_ROLE = keccak256("CONTROLLER_ROLE");
+        bytes32 public constant CONTROLLER_ROLE = keccak256("CONTROLLER_ROLE");
 
     address public auditToken; //AUDT token
-    Members members; // MemSafeERC20Upgradeablebers contractIERC20
+    Members members; // Members contract
     IValidations public validations; // Validation interface
     mapping(address => uint256) public deposits; //track deposits per user
     uint256 public minContribution;

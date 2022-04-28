@@ -1,28 +1,30 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.0;
-import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./../IAuditToken.sol";
-import "./IMemberHelpers.sol";
-import "./IMembers.sol";
-import "./INodeOperationsHelpers.sol";
+import "./MemberHelpers.sol";
+
 
 
 /**
  * @title NodeOperations
- * Additional function for Members
+ * Functions for Node Operators
  */
-contract NodeOperations is AccessControlUpgradeable{
+contract NodeOperations is AccessControl {
 
-    using SafeMathUpgradeable for uint256;
+    using SafeMath for uint256;
 
-    IMemberHelpers public memberHelpers;
+    MemberHelpers public memberHelpers;
     address public auditToken;          
-    IMembers public members;
-    INodeOperationsHelpers public nodeOperationsHelpers;
+    Members public members;
 
     address[] public nodeOperators;
     address[] public CPAs;
+
+    uint256 public stakeRatio;
+    uint256 public stakeRatioDelegating;
+    uint256 public stakingRatioReferral;
 
 
     struct nodeOperator {
@@ -42,7 +44,11 @@ contract NodeOperations is AccessControlUpgradeable{
 
     mapping(address => nodeOperator) public nodeOpStruct;
 
+
+
     bytes32 public constant CONTROLLER_ROLE = keccak256("CONTROLLER_ROLE");
+    bytes32 public constant SETTER_ROLE =  keccak256("SETTER_ROLE");
+
 
     event LogNodeOperatorToggled(address indexed user, string action);
     event LogCPAToggled(address indexed user, string action);
@@ -54,21 +60,35 @@ contract NodeOperations is AccessControlUpgradeable{
     event LogStakingRewardsTransferredOut(address indexed user, uint256 amount);
     event LogStakingRewardsClaimed(address indexed user, uint256 amount);
     event LogStakeRewardsIncreased(address indexed validator, uint256 amount);
+    event LogGovernanceUpdate(uint256 params, string indexed action);
+    event IncreasePOW(uint256 amount, address validator);
 
-    function initialize(address _memberHelpers, address _auditToken, address _members, address _nodeOperationsHelpers) public {
-        require(_memberHelpers != address(0), "NodeOperations:constructor - MemberHelpers address can't be 0");
-        require( _auditToken != address(0), "MemberHelpers:setCohort - Cohort address can't be 0");
-        memberHelpers = IMemberHelpers(_memberHelpers);
+    function initialize(address _memberHelpers, address _auditToken, address _members) public  { 
+        require(_memberHelpers != address(0), "NO:constructor - MemberHelpers address can't be 0");
+        require( _auditToken != address(0), "NO:setCohort - Cohort address can't be 0");
+        memberHelpers = MemberHelpers(_memberHelpers);
         auditToken = _auditToken;
-        nodeOperationsHelpers = INodeOperationsHelpers(_nodeOperationsHelpers);
-        members = IMembers(_members);
+        members = Members(_members);    
+        stakeRatio = 1000;
+        stakeRatioDelegating = 1100;
+        stakingRatioReferral = 9100;
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
-    /// @dev check if caller is a controller
+
+
+     /// @dev check if caller is a controller
     modifier isController(string memory source) {
-        string memory msgError = string(abi.encodePacked("NodeOperations(isController - Modifier):", source, "- Caller is not a controller"));
-        require(hasRole(CONTROLLER_ROLE, msg.sender),msgError);
+        // string memory msgError = string(abi.encodePacked("NodeOperations(isController - Modifier):", source, "- Caller is not a controller"));
+        require(hasRole(CONTROLLER_ROLE, msg.sender), "NO - isController: caller is not controller");
+
+        _;
+    }
+
+
+    /// @dev check if caller is a setter     
+    modifier isSetter {
+        require(hasRole(SETTER_ROLE, msg.sender), "NO - isSetter - Caller is not a setter");
 
         _;
     }
@@ -76,13 +96,40 @@ contract NodeOperations is AccessControlUpgradeable{
     /// @dev check if user is validator
     modifier isValidator(string memory source) {
 
-        string memory msgError = string(abi.encodePacked("NodeOperations(isValidator- Modifier):", source, "- You are not a validator"));
-        // require( members.userMap(msg.sender, Members.UserType(1)), msgError);
-
-        require( members.userMap(msg.sender, IMembers.UserType(1)), msgError);
+        // string memory msgError = string(abi.encodePacked("NodeOperations(isValidator- Modifier):", source, "- You are not a validator"));
+        require( members.userMap(msg.sender, Members.UserType(1)), "isValidator: caller is not validator");
 
         _;
     }
+
+    function updateStakeRatioDelegating(uint256 _newRatio) public isSetter() {
+
+        require(_newRatio != 0, "NO:updateStakeRatioDelegating - New ratio can't be 0");
+        stakeRatioDelegating = _newRatio;
+
+        emit LogGovernanceUpdate(_newRatio, "updateStakeRatioDelegating");
+    }
+
+    function updateStakingRatioReferral(uint256 _newRatio) public isSetter() {
+
+        require(_newRatio != 0, "NO:updateStakingRatioReferral - New ratio can't be 0");
+        stakingRatioReferral = _newRatio;
+        emit LogGovernanceUpdate(_newRatio, "updateStakingRatioReferral");
+    }
+
+    function updateStakeRatio(uint256 _newRatio) public isSetter() {
+
+        require(_newRatio != 0, "NO:updateStakeRatio - New ratio can't be 0");
+        stakeRatio = _newRatio;
+        emit LogGovernanceUpdate(_newRatio, "UpdateStakeRatio");
+    }
+
+    // function updatePOWFee(uint256 _newFee) public isSetter() {
+
+    //     require(_newFee != 0, "NO:updatePOWFee - New value for the POWFee can't be 0");
+    //     POWFee = _newFee;
+    //     emit LogGovernanceUpdate(_newFee, "updatePOWFee");
+    // }
 
     function returnDelegatorLink(address operator) public view returns (address){
 
@@ -94,6 +141,8 @@ contract NodeOperations is AccessControlUpgradeable{
         return nodeOpStruct[operator].isNodeOperator;
 
     }
+
+
 
     /*** 
     * @dev return members of the staking pool
@@ -127,7 +176,7 @@ contract NodeOperations is AccessControlUpgradeable{
             emit LogNodeOperatorToggled(msg.sender, "OFF");
         }
         else{
-            require(memberHelpers.returnDepositAmount(msg.sender) >= memberHelpers.minContribution(), "NodeOperations:toggelNodeOperator - Minimum stake amount not met.");
+            require(memberHelpers.returnDepositAmount(msg.sender) >= memberHelpers.minContribution(), "NO:toggelNodeOperator - Minimum stake amount not met.");
             nodeOpStruct[msg.sender].isNodeOperator = true;
             nodeOperators.push(msg.sender);
             emit LogNodeOperatorToggled(msg.sender, "ON");
@@ -224,7 +273,7 @@ contract NodeOperations is AccessControlUpgradeable{
 
         address oldDelegatee = nodeOpStruct[msg.sender].delegatorLink;
 
-        require(oldDelegatee != address(0x0), "NodeOperations:removeDelegation You are not delegating your stake yet.");
+        require(oldDelegatee != address(0x0), "NO:removeDelegation Not delegating yet.");
 
 
         for (uint256 i = 0; i < nodeOpStruct[oldDelegatee].delegations.length; i++) {
@@ -247,8 +296,8 @@ contract NodeOperations is AccessControlUpgradeable{
 
      function delegate(address delegatee) public isValidator("Delegate") {
 
-        require(!nodeOpStruct[msg.sender].isNodeOperator, "NodeOperations:delegagte - You are a node operator, first cancel this role and then delegate again. ");
-        require(!nodeOpStruct[delegatee].isDelegating[msg.sender], "NodeOperations:delegate - You are already delegating to this member.");
+        require(!nodeOpStruct[msg.sender].isNodeOperator, "NO:delegagte - Can't delegate while a node operator. ");
+        require(!nodeOpStruct[delegatee].isDelegating[msg.sender], "NO:delegate - You are already delegating to this user");
 
         if (nodeOpStruct[msg.sender].delegatorLink != address(0x0)) 
             removeDelegation();
@@ -268,6 +317,7 @@ contract NodeOperations is AccessControlUpgradeable{
     */
     function increasePOWRewards(address validator, uint256 amount) public isController("increasePOWRewards") {
             nodeOpStruct[validator].POWAmount = nodeOpStruct[validator].POWAmount.add(amount);
+            emit IncreasePOW(amount, validator);
     }
 
 
@@ -280,12 +330,13 @@ contract NodeOperations is AccessControlUpgradeable{
 
         for (uint256 i = 0; i < nodeOpStruct[validator].delegations.length ; i++) {
             address delegating = nodeOpStruct[validator].delegations[i];
-            uint256 amount = memberHelpers.returnDepositAmount(delegating).div(nodeOperationsHelpers.stakeRatioDelegating());
+            uint256 amount = memberHelpers.returnDepositAmount(delegating).div(stakeRatioDelegating);
             nodeOpStruct[delegating].delegateAmount = nodeOpStruct[delegating].delegateAmount.add(amount);
-            referringReward = referringReward.add(memberHelpers.returnDepositAmount(delegating).div(nodeOperationsHelpers.stakingRatioReferral()));
+            referringReward = referringReward.add((memberHelpers.returnDepositAmount(delegating).div(stakingRatioReferral)));
             emit LogDelegatedStakeRewardsIncreased(delegating, amount);
-        }
 
+        }
+        // referringReward =  referringReward.div(stakingRatioReferral);
         if (referringReward > 0) {
             nodeOpStruct[validator].referralAmount = nodeOpStruct[validator].referralAmount.add(referringReward);
             emit LogReferralStakeRewardsIncreased(validator, referringReward);
@@ -297,7 +348,7 @@ contract NodeOperations is AccessControlUpgradeable{
     * @param validator - validator for whom values are increased
     */
     function increaseStakeRewards(address validator) public isController("increaseStakeRewards") {
-        uint256 amount = memberHelpers.returnDepositAmount(validator).div(nodeOperationsHelpers.stakeRatio());
+        uint256 amount = memberHelpers.returnDepositAmount(validator).div(stakeRatio);
         nodeOpStruct[validator].stakeAmount = nodeOpStruct[validator].stakeAmount.add(amount);
         emit LogStakeRewardsIncreased(validator, amount);
     }
@@ -330,5 +381,4 @@ contract NodeOperations is AccessControlUpgradeable{
             emit LogStakingRewardsClaimed(msg.sender, payment);
         }
     }
-
 }

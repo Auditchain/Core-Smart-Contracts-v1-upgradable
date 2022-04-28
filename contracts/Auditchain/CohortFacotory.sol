@@ -14,15 +14,14 @@ import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgrad
 
 contract CohortFactory is  AccessControlEnumerableUpgradeable {
 
-    // Audit types to be used. Two types added for future expansion 
+ // Audit types to be used. Two types added for future expansion 
     enum AuditTypes {
         Unknown, Financial, System, NFT, Type4, Type5
     }
 
+    uint256[] public minValidatorPerCohort;
     bytes32 public constant SETTER_ROLE =  keccak256("SETTER_ROLE");
 
-
-    uint256[] public minValidatorPerCohort;
 
     // Invitation structure to hold info about its status
     struct Invitation {
@@ -35,6 +34,9 @@ contract CohortFactory is  AccessControlEnumerableUpgradeable {
         bool deleted;
     }
 
+    // struct Cohorts {
+    //     AuditTypes audits;
+    // }
 
     mapping(address => uint256[]) public cohortList;
     mapping(address => mapping(uint256=>bool)) public cohortMap;
@@ -42,7 +44,7 @@ contract CohortFactory is  AccessControlEnumerableUpgradeable {
     
 
     Members members;                                            // pointer to Members contract1 
-    MemberHelpers public memberHelpers;                         // pointerr to memberHelpers              
+    MemberHelpers public memberHelpers;                                       
     mapping (address =>  Invitation[]) public invitations;      // invitations list
     address platformAddress;                                    // address to deposit platform fees
 
@@ -51,29 +53,31 @@ contract CohortFactory is  AccessControlEnumerableUpgradeable {
     event InvitationAccepted(address indexed validator, uint256 invitationNumber);
     event CohortCreated(address indexed enterprise, uint256 audits);
     event UpdateMinValidatorsPerCohort(uint256 minValidatorPerCohort, AuditTypes audits);
-    event ValidatorCleared(address validator, AuditTypes audit, address enterprise);    
+    event ValidatorCleared(address validator, AuditTypes audit, address enterprise);
 
 
-    function initialize(address _members) public  {
-        members = Members(_members);
-        minValidatorPerCohort = [3,3,3,3,3,3];
-        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender); // 
-    }
-
-
-   /// @dev check if caller is a setter     
+     /// @dev check if caller is a setter     
     modifier isSetter {
         require(hasRole(SETTER_ROLE, msg.sender), "Members:isSetter - Caller is not a setter");
 
         _;
+    }    
+
+
+    function initialize(address _members, address _memberHelpers) public  {
+        members = Members(_members);
+        memberHelpers = MemberHelpers(_memberHelpers);
+        minValidatorPerCohort = [3,3,3,3,3,3];
+        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender); // 
     }
+
 
    /**
     * @dev to be called by Governance contract to update new value for min validators per cohort
     * @param _minValidatorPerCohort new value 
     * @param audits type of validations
     */
-    function updateMinValidatorsPerCohort(uint256 _minValidatorPerCohort, uint256 audits) public  isSetter() {
+    function updateMinValidatorsPerCohort(uint256 _minValidatorPerCohort, uint256 audits) public  isSetter()  {
 
         require(_minValidatorPerCohort != 0, "CohortFactory:updateMinValidatorsPerCohort - New value for the  min validator per cohort can't be 0");
         require(audits <= 6 && audits >=0 , "Cohort Factory:updateMinValidatorsPerCohort - Audit type has to be <= 5 and >=0");

@@ -8,7 +8,7 @@ import "./Members.sol";
 import "./MemberHelpers.sol";
 import "./ICohortFactory.sol";
 import "./INodeOperations.sol";
-import "./INodeOperationsHelpers.sol";
+// import "./INodeOperationsHelpers.sol";
 
 
 
@@ -30,7 +30,7 @@ contract DepositModifiers is  AccessControlEnumerableUpgradeable {
     MemberHelpers public memberHelpers;
     ICohortFactory public cohortFactory;
     INodeOperations public nodeOperations;
-    INodeOperationsHelpers public nodeOperationsHelpers;
+    // INodeOperationsHelpers public nodeOperationsHelpers;
 
     mapping(address => DataSubscriberTypes[]) public dataSubscriberCohorts;
 
@@ -52,14 +52,14 @@ contract DepositModifiers is  AccessControlEnumerableUpgradeable {
     event LogNonCohortValidationPaid(address indexed requestor, address winner, bytes32 validationHash, uint256 amount);
 
 
-    function initialize(address  _members, address _auditToken, address _memberHelpers, address _cohortFactory, address _nodeOperations, address _nodeOperationsHelpers) public  {
+    function initialize(address  _members, address _auditToken, address _memberHelpers, address _cohortFactory, address _nodeOperations) public  {
         require(_members != address(0), "DepositModifier:initialize - Member address can't be 0");
         members = Members(_members);
         auditToken = _auditToken;
         memberHelpers = MemberHelpers(_memberHelpers);
         cohortFactory = ICohortFactory(_cohortFactory);
         nodeOperations = INodeOperations(_nodeOperations);
-        nodeOperationsHelpers = INodeOperationsHelpers(_nodeOperationsHelpers);
+        // nodeOperationsHelpers = INodeOperationsHelpers(_nodeOperationsHelpers);
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
@@ -173,12 +173,12 @@ contract DepositModifiers is  AccessControlEnumerableUpgradeable {
     * @param _requestor - requesting party
     * @param validationHash -  hash identifying validation
     */
-    function processNonChortPayment(address _winner, address _requestor, bytes32 validationHash) public isController("processNonChortPayment") {
+    function processNonChortPayment(address _winner, address _requestor, bytes32 validationHash, uint256 price) public isController("processNonChortPayment") {
 
-        uint256 POWFee = nodeOperationsHelpers.POWFee();
-        memberHelpers.decreaseDeposit(_requestor, POWFee);
-        nodeOperations.increasePOWRewards(_winner, POWFee);
-        emit LogNonCohortValidationPaid(_requestor, _winner, validationHash, POWFee);
+        // uint256 POWFee = nodeOperations.POWFee();
+        memberHelpers.decreaseDeposit(_requestor, price);
+        nodeOperations.increasePOWRewards(_winner, price);
+        emit LogNonCohortValidationPaid(_requestor, _winner, validationHash, price);
     }
 
     /**

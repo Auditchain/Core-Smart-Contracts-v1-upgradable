@@ -2,31 +2,31 @@
 pragma solidity =0.8.0;
 
 import "./Validations.sol";
-import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
+// import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 
 
 
 contract ValidationsCohort is Validations {
     using SafeMathUpgradeable for uint256;
 
-    function initialize(address _members, address _memberHelpers, address _cohortFactory, address _depositModifiers, address _nodeOperationsHelpers,  address _nodeOperations, address _validationHelpers) public override
+    function initialize(address _members, address _memberHelpers, address _cohortFactory, address _depositModifiers,   address _nodeOperations, address _validationHelpers, address _queue) public override
     {
-            super.initialize(_members, _memberHelpers, _cohortFactory, _depositModifiers, _nodeOperations, _nodeOperationsHelpers,_validationHelpers);
+            super.initialize(_members, _memberHelpers, _cohortFactory, _depositModifiers, _nodeOperations, _validationHelpers, _queue);
 
     }
 
 
-     /**
+   /**
     * @dev to be called by Enterprise to initiate new validation
     * @param documentHash - hash of unique identifier of validated transaction
     * @param url - locatoin of the file on IPFS or other decentralized file storage
     * @param auditType - type of auditing 
     */
-    function initializeValidationCohort(bytes32 documentHash, string memory url, AuditTypes auditType) public {
+    function initializeValidationCohort(bytes32 documentHash, string memory url, AuditTypes auditType, uint256 price) public {
 
-        require(checkIfRequestorHasFunds(msg.sender), "NoCohort:initializeValidation - Not sufficient funds. Deposit additional funds.");
+        require(checkIfRequestorHasFunds(msg.sender, price), "NoCohort:initializeValidation - Not sufficient funds. Deposit additional funds.");
         require(cohortFactory.cohortMap(msg.sender, uint256(auditType)), "Cohort:intializeValidation - Only enterprise owing this cohort can call this function");
-        super.initializeValidation(documentHash, url, auditType, true);
+        super.initializeValidation(documentHash, url, auditType, true, price);
         
     }
 
@@ -36,7 +36,7 @@ contract ValidationsCohort is Validations {
    * @param requestor a user whos funds are checked
    * @return true or false 
    */
-   function checkIfRequestorHasFunds(address requestor) public override view returns (bool) {
+   function checkIfRequestorHasFunds(address requestor, uint256 price) public override returns (bool) {
 
        if (outstandingValidations[requestor] > 0 )
         return ( memberHelpers.deposits(requestor) > members.amountTokensPerValidation()
@@ -78,7 +78,7 @@ contract ValidationsCohort is Validations {
         
     }
 
-     function returnValidatorCount(bytes32 validationHash) public view override returns (uint256){
+     function returnValidatorCount(bytes32 validationHash) public override returns (uint256){
 
         Validation storage validation = validations[validationHash];
         address[] memory validatorsList = cohortFactory.returnValidatorList(validation.requestor, uint256(validation.auditType));
