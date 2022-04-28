@@ -332,7 +332,7 @@ contract NodeOperations is AccessControl {
             address delegating = nodeOpStruct[validator].delegations[i];
             uint256 amount = memberHelpers.returnDepositAmount(delegating).div(stakeRatioDelegating);
             nodeOpStruct[delegating].delegateAmount = nodeOpStruct[delegating].delegateAmount.add(amount);
-            referringReward = referringReward.add((memberHelpers.returnDepositAmount(delegating).div(stakingRatioReferral)));
+            referringReward = referringReward.add(memberHelpers.returnDepositAmount(delegating).div(stakingRatioReferral));
             emit LogDelegatedStakeRewardsIncreased(delegating, amount);
 
         }
