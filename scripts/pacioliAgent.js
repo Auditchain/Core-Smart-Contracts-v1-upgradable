@@ -629,7 +629,7 @@ async function executeVote(values, trxHash) {
 
 async function getFileAtr() {
 
-    let stats = fs.statSync("scripts/pacioliAgentInfura.js");
+    let stats = fs.statSync("scripts/pacioliAgent.js");
     return stats.atimeMs + stats.size;
 }
 
