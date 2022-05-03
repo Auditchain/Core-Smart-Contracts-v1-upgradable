@@ -1,8 +1,9 @@
 pragma solidity =0.8.0;
-pragma experimental ABIEncoderV2;
-
 
 // SPDX-License-Identifier: MIT
+
+
+
 /**
  * @dev Interface of the ERC20 standard as defined in the EIP.
  */
@@ -82,6 +83,11 @@ interface IERC20Upgradeable {
 }
 
 // SPDX-License-Identifier: MIT
+
+
+
+
+
 /**
  * @dev Interface for the optional metadata functions from the ERC20 standard.
  *
@@ -105,6 +111,9 @@ interface IERC20MetadataUpgradeable is IERC20Upgradeable {
 }
 
 // SPDX-License-Identifier: MIT
+
+
+
 /**
  * @dev This is a base contract to aid in writing upgradeable contracts, or any kind of contract that will be deployed
  * behind a proxy. Since a proxied contract can't have a constructor, it's common to move constructor logic to an
@@ -149,6 +158,10 @@ abstract contract Initializable {
 }
 
 // SPDX-License-Identifier: MIT
+
+
+
+
 /**
  * @dev Provides information about the current execution context, including the
  * sender of the transaction and its data. While these are generally available
@@ -177,6 +190,14 @@ abstract contract ContextUpgradeable is Initializable {
 }
 
 // SPDX-License-Identifier: MIT
+
+
+
+
+
+
+
+
 /**
  * @dev Implementation of the {IERC20} interface.
  *
@@ -532,6 +553,13 @@ contract ERC20Upgradeable is Initializable, ContextUpgradeable, IERC20Upgradeabl
 }
 
 // SPDX-License-Identifier: MIT
+
+
+
+
+
+
+
 /**
  * @dev Extension of {ERC20} that allows token holders to destroy both their own
  * tokens and those that they have an allowance for, in a way that can be
@@ -577,6 +605,9 @@ abstract contract ERC20BurnableUpgradeable is Initializable, ContextUpgradeable,
 }
 
 // SPDX-License-Identifier: MIT
+
+
+
 /**
  * @dev External interface of AccessControl declared to support ERC165 detection.
  */
@@ -662,6 +693,11 @@ interface IAccessControlUpgradeable {
 }
 
 // SPDX-License-Identifier: MIT
+
+
+
+
+
 /**
  * @dev External interface of AccessControlEnumerable declared to support ERC165 detection.
  */
@@ -688,6 +724,9 @@ interface IAccessControlEnumerableUpgradeable is IAccessControlUpgradeable {
 }
 
 // SPDX-License-Identifier: MIT
+
+
+
 /**
  * @dev String operations.
  */
@@ -752,6 +791,9 @@ library StringsUpgradeable {
 }
 
 // SPDX-License-Identifier: MIT
+
+
+
 /**
  * @dev Interface of the ERC165 standard, as defined in the
  * https://eips.ethereum.org/EIPS/eip-165[EIP].
@@ -774,6 +816,12 @@ interface IERC165Upgradeable {
 }
 
 // SPDX-License-Identifier: MIT
+
+
+
+
+
+
 /**
  * @dev Implementation of the {IERC165} interface.
  *
@@ -805,6 +853,15 @@ abstract contract ERC165Upgradeable is Initializable, IERC165Upgradeable {
 }
 
 // SPDX-License-Identifier: MIT
+
+
+
+
+
+
+
+
+
 /**
  * @dev Contract module that allows children to implement role-based access
  * control mechanisms. This is a lightweight version that doesn't allow enumerating role
@@ -1017,6 +1074,9 @@ abstract contract AccessControlUpgradeable is Initializable, ContextUpgradeable,
 }
 
 // SPDX-License-Identifier: MIT
+
+
+
 /**
  * @dev Library for managing
  * https://en.wikipedia.org/wiki/Set_(abstract_data_type)[sets] of primitive
@@ -1371,6 +1431,14 @@ library EnumerableSetUpgradeable {
 }
 
 // SPDX-License-Identifier: MIT
+
+
+
+
+
+
+
+
 /**
  * @dev Extension of {AccessControl} that allows enumerating the members of each role.
  */
@@ -1454,8 +1522,12 @@ abstract contract AccessControlEnumerableUpgradeable is Initializable, IAccessCo
 }
 
 // SPDX-License-Identifier: MIT
+
+
+
+
 /// @title Locked
-/// @dev Smart contract to enable locking and unlocking of token holders.
+/// @dev Smart contract to enable locking and unlocking of token holders. 
 contract Locked is AccessControlEnumerableUpgradeable {
 
     mapping (address => bool) public lockedList;
@@ -1535,7 +1607,15 @@ contract Locked is AccessControlEnumerableUpgradeable {
 }
 
 // SPDX-License-Identifier: MIT
-contract AuditToken is Locked, ERC20Upgradeable,  ERC20BurnableUpgradeable{{
+
+
+pragma experimental ABIEncoderV2;
+
+
+
+
+
+contract AuditToken is Locked, ERC20Upgradeable,  ERC20BurnableUpgradeable{
       
     /// @notice A record of each accounts delegate
     mapping (address => address) public delegates;
@@ -1572,10 +1652,11 @@ contract AuditToken is Locked, ERC20Upgradeable,  ERC20BurnableUpgradeable{{
         __ERC20_init("Auditchain", "AUDT");
         require(account != address(0), "AuditToken:initialize - Address can't be 0");
         _setupRole(DEFAULT_ADMIN_ROLE, account);
+        // _mint(account, 250000000000000000000000000);
     }
 
     /// @dev prevent accidental sending of tokens to this token contract
-    /// @param _self - address of this contract
+    ///  _self - address of this contract
     modifier notSelf(address _self) {
         require(
             _self != address(this),

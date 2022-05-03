@@ -1,7 +1,9 @@
 pragma solidity =0.8.0;
 
-
 // SPDX-License-Identifier: MIT
+
+
+
 /**
  * @dev External interface of AccessControl declared to support ERC165 detection.
  */
@@ -87,6 +89,11 @@ interface IAccessControlUpgradeable {
 }
 
 // SPDX-License-Identifier: MIT
+
+
+
+
+
 /**
  * @dev External interface of AccessControlEnumerable declared to support ERC165 detection.
  */
@@ -113,6 +120,9 @@ interface IAccessControlEnumerableUpgradeable is IAccessControlUpgradeable {
 }
 
 // SPDX-License-Identifier: MIT
+
+
+
 /**
  * @dev This is a base contract to aid in writing upgradeable contracts, or any kind of contract that will be deployed
  * behind a proxy. Since a proxied contract can't have a constructor, it's common to move constructor logic to an
@@ -157,6 +167,10 @@ abstract contract Initializable {
 }
 
 // SPDX-License-Identifier: MIT
+
+
+
+
 /**
  * @dev Provides information about the current execution context, including the
  * sender of the transaction and its data. While these are generally available
@@ -185,6 +199,9 @@ abstract contract ContextUpgradeable is Initializable {
 }
 
 // SPDX-License-Identifier: MIT
+
+
+
 /**
  * @dev String operations.
  */
@@ -249,6 +266,9 @@ library StringsUpgradeable {
 }
 
 // SPDX-License-Identifier: MIT
+
+
+
 /**
  * @dev Interface of the ERC165 standard, as defined in the
  * https://eips.ethereum.org/EIPS/eip-165[EIP].
@@ -271,6 +291,12 @@ interface IERC165Upgradeable {
 }
 
 // SPDX-License-Identifier: MIT
+
+
+
+
+
+
 /**
  * @dev Implementation of the {IERC165} interface.
  *
@@ -302,6 +328,15 @@ abstract contract ERC165Upgradeable is Initializable, IERC165Upgradeable {
 }
 
 // SPDX-License-Identifier: MIT
+
+
+
+
+
+
+
+
+
 /**
  * @dev Contract module that allows children to implement role-based access
  * control mechanisms. This is a lightweight version that doesn't allow enumerating role
@@ -514,6 +549,9 @@ abstract contract AccessControlUpgradeable is Initializable, ContextUpgradeable,
 }
 
 // SPDX-License-Identifier: MIT
+
+
+
 /**
  * @dev Library for managing
  * https://en.wikipedia.org/wiki/Set_(abstract_data_type)[sets] of primitive
@@ -868,6 +906,14 @@ library EnumerableSetUpgradeable {
 }
 
 // SPDX-License-Identifier: MIT
+
+
+
+
+
+
+
+
 /**
  * @dev Extension of {AccessControl} that allows enumerating the members of each role.
  */
@@ -951,8 +997,12 @@ abstract contract AccessControlEnumerableUpgradeable is Initializable, IAccessCo
 }
 
 // SPDX-License-Identifier: MIT
+
+
+
+
 /// @title Locked
-/// @dev Smart contract to enable locking and unlocking of token holders.
+/// @dev Smart contract to enable locking and unlocking of token holders. 
 contract Locked is AccessControlEnumerableUpgradeable {
 
     mapping (address => bool) public lockedList;
