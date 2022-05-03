@@ -48,7 +48,6 @@ contract DepositModifiers is  AccessControlEnumerableUpgradeable {
     event LogDataSubscriberValidatorPaid(address  from, address indexed validator, uint256 amount);
     event LogFeesReceived(address indexed validator, uint256 tokens, bytes32 validationHash);
     event LogRewardsDeposited(uint256 tokens, uint256 enterpriseAmount, address indexed enterprise, bytes32 validationHash);
-    event LogNonCohortPaymentReceived(address indexed validator, uint256 tokens, bytes32 validationHash);
     event LogNonCohortValidationPaid(address indexed requestor, address winner, bytes32 validationHash, uint256 amount);
 
 
