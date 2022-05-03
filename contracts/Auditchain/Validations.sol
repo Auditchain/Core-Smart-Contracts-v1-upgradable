@@ -68,9 +68,9 @@ abstract contract Validations is  ReentrancyGuardUpgradeable{
 
     mapping(bytes32 => Validation) public validations; // track each validation
 
-    event ValidationInitialized(address indexed user, bytes32 validationHash, uint256 initTime, bytes32 documentHash, string url, AuditTypes indexed auditType, uint256 price);
+    event ValidationInitialized(address indexed user, bytes32 indexed validationHash, uint256 initTime, bytes32 documentHash, string url, AuditTypes indexed auditType);
     event ValidatorValidated(address indexed validator, bytes32 indexed documentHash, uint256 indexed validationTime, ValidationStatus decision, string valUrl);
-    event RequestExecuted(uint256 indexed audits, address indexed requestor, bytes32 validationHash, bytes32 documentHash, uint256 consensus, uint256 quorum,  uint256 timeExecuted, string url, address[] winners);
+    event RequestExecuted(uint256 indexed audits, address indexed requestor, bytes32 indexed validationHash, bytes32 documentHash, uint256 consensus, uint256 quorum,  uint256 timeExecuted, string url, address[] winners);
     event PaymentProcessed(bytes32 validationHash, address winner, uint256 pointsPlus, uint256 pointsMinus);
     event WinnerVoted(address validator, address winner, bool isValid);
 
@@ -103,14 +103,14 @@ abstract contract Validations is  ReentrancyGuardUpgradeable{
     }
  
    
-    /**
+   /**
      * @dev to be called by Enterprise to initiate new validation
      * @param documentHash - hash of unique identifier of validated transaction
      * @param url - locatoin of the file on IPFS or other decentralized file storage
      * @param auditType - type of auditing 
      */
     function initializeValidation(bytes32 documentHash, string memory url, AuditTypes auditType, bool isCohort, uint256 price) internal virtual {
-        require(documentHash.length > 0, "Val:initializeValidation - Document hash value can't be 0");
+        require(documentHash.length > 0, "Validation:initializeValidation - Document hash value can't be 0");
 
         uint256 validationTime = block.timestamp;
         bytes32 validationHash = keccak256(abi.encodePacked(documentHash, validationTime, msg.sender));
@@ -126,10 +126,12 @@ abstract contract Validations is  ReentrancyGuardUpgradeable{
         newValidation.price = price;
 
 
+
         queue.addToQueue(price, validationHash );
 
-        emit ValidationInitialized(msg.sender, validationHash, validationTime, documentHash, url, auditType, price);   
+        emit ValidationInitialized(msg.sender, validationHash, validationTime, documentHash, url, auditType);   
     }
+
 
 
     function voteWinner(address[] memory winners, bool[] memory vote,  bytes32 validationHash) public {
@@ -211,6 +213,7 @@ abstract contract Validations is  ReentrancyGuardUpgradeable{
         return (validatorListActive, stake, validatorsValues, validationTime, validationUrl, reportHash);
     }
 
+
     /**
      * @dev validators can check if specific document has been already validated by them
      * @param validationHash - consist of hash of hashed document and timestamp
@@ -234,13 +237,14 @@ abstract contract Validations is  ReentrancyGuardUpgradeable{
      * @param validationHash - consist of hash of hashed document and timestamp
      * @param documentHash hash of the document
      */
-    function executeValidation(bytes32 validationHash, bytes32 documentHash, uint256 _quorum) internal nonReentrant {
+   function executeValidation(bytes32 validationHash, bytes32 documentHash, uint256 _quorum) internal nonReentrant {
        
         Validation storage validation = validations[validationHash];
         validation.executionTime = block.timestamp;
 
         (address[] memory winners, uint256 consensus) = validationHelpers.determineWinners(validationHash);
         validation.consensus = consensus;
+        // (,uint256[] memory totalStake,,,,) =  collectValidationResults(validationHash);
         recentTimestamp = validation.validationTime;
         recentValidationHash = validationHash;
         queue.setValidatedFlag(validationHash);
@@ -263,11 +267,11 @@ abstract contract Validations is  ReentrancyGuardUpgradeable{
 
         bytes32 validationHash = keccak256(abi.encodePacked(documentHash, validationTime, subscriber));
         Validation storage validation = validations[validationHash];
-        require(members.userMap(msg.sender, IMembers.UserType(1)), "Val:validate - Validator is not authorized.");
-        require(validation.validationTime == validationTime, "Val:validate - Params don't match.");
-        require(validation.validatorChoice[msg.sender] == ValidationStatus.Undefined, "Val:validate - Validated already.");
-        require(nodeOperations.returnDelegatorLink(msg.sender) == address(0x0), "Val:validate - You have delegated your stake");
-        require(nodeOperations.isNodeOperator(msg.sender), "Val:validate - you are not a node operator");
+        require(members.userMap(msg.sender, IMembers.UserType(1)), "Validation:validate - Validator is not authorized.");
+        require(validation.validationTime == validationTime, "Validation:validate - the validation params don't match.");
+        require(validation.validatorChoice[msg.sender] == ValidationStatus.Undefined, "Validation:validate - This document has been validated already.");
+        require(nodeOperations.returnDelegatorLink(msg.sender) == address(0x0), "Validations:validate - you can't validated because you have delegated your stake");
+        require(nodeOperations.isNodeOperator(msg.sender), "Validations:validate - you are not a node operator");
         validation.validatorChoice[msg.sender] = decision;
         validation.validatorTime[msg.sender] = block.timestamp;
         validation.validationUrl[msg.sender] = valUrl;
@@ -321,7 +325,6 @@ abstract contract Validations is  ReentrancyGuardUpgradeable{
         paymentSent = winner != address(0);
 
     }
-
 
    function returnValidationUrl(bytes32 validationHash, address user) public  view returns(string memory url) {
 
