@@ -1,4 +1,5 @@
 node_modules
-build/contracts
 .env
+package-lock.json
+.js1
 
