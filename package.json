@@ -38,6 +38,7 @@
     "@openzeppelin/contracts": "^4.1.0",
     "@openzeppelin/contracts-ethereum-package": "^3.0.0",
     "@openzeppelin/contracts-upgradeable": "^4.1.0",
+    "@truffle/hdwallet-provider": "^2.0.8",
     "babel-polyfill": "^6.26.0",
     "babel-preset-env": "^1.7.0",
     "babel-preset-es2015": "^6.24.1",
@@ -47,6 +48,7 @@
     "dotenv": "^9.0.2",
     "ipfs-api": "^26.1.2",
     "ipfs-http-client": "^53.0.1",
+    "prompt-sync": "^4.2.0",
     "truffle-contract": "^4.0.31",
     "truffle-hdwallet-provider": "^1.0.17"
   }
