@@ -174,10 +174,10 @@ async function verifyPacioli(metadatatUrl, trxHash) {
     const result = await ipfs1.files.cat(metadatatUrl);
     const reportUrl = JSON.parse(result)["reportUrl"];
     console.log("[1 " + trxHash + "]" + "  Querying Pacioli " + reportUrl);
-    // const reportContent = await pacioli.callRemote(reportUrl, trxHash, true)
-    //     .catch(error => console.log("ERROR: " + error));
-    const reportContent = await pacioli.callLocal(reportUrl, trxHash, true)
+    const reportContent = await pacioli.callRemote(reportUrl, trxHash, true)
         .catch(error => console.log("ERROR: " + error));
+    // const reportContent = await pacioli.callLocal(reportUrl, trxHash, true)
+    //     .catch(error => console.log("ERROR: " + error));
 
 
     if (!reportContent)
@@ -435,7 +435,7 @@ async function voteWinner(winners, votes, validationHash, trxHash) {
 async function getBlockNumber() {
 
     const blockNumber = await web3.eth.getBlockNumber() - 3495;
-    console.log("block number:", blockNumber);
+    // console.log("block number:", blockNumber);
     return blockNumber;
 }
 
@@ -464,11 +464,11 @@ async function checkValQueue(vHash) {
                     try {
 
                         const nonce = await web3.eth.getTransactionCount(owner);
-                        const blockNumber = await getBlockNumber();
+                        const blockNumber = Number(await getBlockNumber()) - 1;
 
                         const validationInitialized = await nonCohortValidate.getPastEvents("ValidationInitialized", {
                             filter: { validationHash: validationHash },
-                            fromBlock: blockNumber,
+                            fromBlock: 0,
                             toBlock: "latest",
                         });
 
@@ -567,7 +567,7 @@ async function checkVoteQueue(vHash) {
 
                     const requestExecuted = await nonCohortValidate.getPastEvents("RequestExecuted", {
                         filter: { validationHash: validationHash },
-                        fromBlock: blockNumber,
+                        fromBlock: 0,
                         toBlock: "latest",
                     });
 
