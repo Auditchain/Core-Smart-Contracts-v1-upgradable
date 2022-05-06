@@ -1,0 +1,1 @@
+- Make sure to copy the pacioliClient sub-project from the latest at https://github.com/Auditchain/Reporting-Validation-Engine/tree/main/clientExamples/pacioliClient
