@@ -20,7 +20,7 @@ const QUEUE = artifacts.require("../Queue");
 
 
 
-const Cohort = artifacts.require('../ValidationsCohort');
+// const Cohort = artifacts.require('../ValidationsCohort');
 // const CREATECOHORT = artifacts.require('../CreateCohort');
 
 var BigNumber = require('big-number');
