@@ -49,7 +49,7 @@ let providerForUpdate;
 const Members = require('../build/contracts/Members.json');
 const Token = require('../build/contracts/AuditToken.json');
 const Validation = require('../build/contracts/ValidationsNoCohort.json');
-const { start } = require('pm2');
+
 
 let members, token, web3, validation, owner;
 let run = 0;
