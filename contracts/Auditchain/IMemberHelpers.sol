@@ -5,6 +5,6 @@ interface IMemberHelpers {
 
     function returnDepositAmount(address user) external view returns (uint256);
     function minContribution() external view returns (uint256);
-    function increaseDeposit(address user, uint256 amount) external;
+    function increaseDeposit(address user, uint256 amount)  external returns (bool);
 
 }

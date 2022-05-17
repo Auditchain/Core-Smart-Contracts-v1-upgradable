@@ -19,7 +19,7 @@ contract NodeOperationsHelpers is AccessControlEnumerableUpgradeable {
     event LogGovernanceUpdate(uint256 params, string indexed action);
 
 
-    function initialize() public {
+    function initialize() external {
        
         stakeRatio = 1000;
         stakeRatioDelegating = 1100;
@@ -35,7 +35,7 @@ contract NodeOperationsHelpers is AccessControlEnumerableUpgradeable {
         _;
     }
 
-    function updateStakeRatioDelegating(uint256 _newRatio) public isSetter() {
+    function updateStakeRatioDelegating(uint256 _newRatio) external isSetter() {
 
         require(_newRatio != 0, "NodeOperations:updateStakeRatioDelegating - New value for the stake delegating ratio can't be 0");
         stakeRatioDelegating = _newRatio;
@@ -43,21 +43,21 @@ contract NodeOperationsHelpers is AccessControlEnumerableUpgradeable {
         emit LogGovernanceUpdate(_newRatio, "updateStakeRatioDelegating");
     }
 
-    function updateStakingRatioReferral(uint256 _newRatio) public isSetter() {
+    function updateStakingRatioReferral(uint256 _newRatio) external isSetter() {
 
         require(_newRatio != 0, "NodeOperations:updateStakingRatioReferral - New value for the stake ratio can't be 0");
         stakingRatioReferral = _newRatio;
         emit LogGovernanceUpdate(_newRatio, "updateStakingRatioReferral");
     }
 
-    function updateStakeRatio(uint256 _newRatio) public isSetter() {
+    function updateStakeRatio(uint256 _newRatio) external isSetter() {
 
         require(_newRatio != 0, "NodeOperations:updateStakeRatio - New value for the stake ratio can't be 0");
         stakeRatio = _newRatio;
         emit LogGovernanceUpdate(_newRatio, "UpdateStakeRatio");
     }
 
-    function updatePOWFee(uint256 _newFee) public isSetter() {
+    function updatePOWFee(uint256 _newFee) external isSetter() {
 
         require(_newFee != 0, "NodeOperations:updatePOWFee - New value for the POWFee can't be 0");
         POWFee = _newFee;

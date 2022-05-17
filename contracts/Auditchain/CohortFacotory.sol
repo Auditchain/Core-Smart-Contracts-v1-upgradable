@@ -43,10 +43,9 @@ contract CohortFactory is  AccessControlEnumerableUpgradeable {
     mapping (address => mapping(address=> AuditTypes[])) public validatorCohortList;  // list of validators
     
 
-    Members members;                                            // pointer to Members contract1 
+    Members public members;                                            // pointer to Members contract1 
     MemberHelpers public memberHelpers;                                       
     mapping (address =>  Invitation[]) public invitations;      // invitations list
-    address platformAddress;                                    // address to deposit platform fees
 
 
     event ValidatorInvited(address  inviting, address indexed invitee, AuditTypes indexed audits, uint256 invitationNumber);
@@ -61,10 +60,10 @@ contract CohortFactory is  AccessControlEnumerableUpgradeable {
         require(hasRole(SETTER_ROLE, msg.sender), "Members:isSetter - Caller is not a setter");
 
         _;
-    }    
+    }   
 
 
-    function initialize(address _members, address _memberHelpers) public  {
+    function initialize(address _members, address _memberHelpers) external  {
         members = Members(_members);
         memberHelpers = MemberHelpers(_memberHelpers);
         minValidatorPerCohort = [3,3,3,3,3,3];
@@ -77,10 +76,10 @@ contract CohortFactory is  AccessControlEnumerableUpgradeable {
     * @param _minValidatorPerCohort new value 
     * @param audits type of validations
     */
-    function updateMinValidatorsPerCohort(uint256 _minValidatorPerCohort, uint256 audits) public  isSetter()  {
+    function updateMinValidatorsPerCohort(uint256 _minValidatorPerCohort, uint8 audits) external  isSetter()  {
 
-        require(_minValidatorPerCohort != 0, "CohortFactory:updateMinValidatorsPerCohort - New value for the  min validator per cohort can't be 0");
-        require(audits <= 6 && audits >=0 , "Cohort Factory:updateMinValidatorsPerCohort - Audit type has to be <= 5 and >=0");
+        require(_minValidatorPerCohort != 0, "CF:updateMinValidatorsPerCohort - Min validator per cohort can't be 0");
+        require(audits <= 5 , "Cohort Factory:updateMinValidatorsPerCohort - Audit type is out of range");
         minValidatorPerCohort[audits] = _minValidatorPerCohort;
         emit UpdateMinValidatorsPerCohort(_minValidatorPerCohort, AuditTypes(audits));
     }
@@ -92,20 +91,21 @@ contract CohortFactory is  AccessControlEnumerableUpgradeable {
     */
     function inviteValidator(address validator, uint256 audit) public {
 
-        Invitation memory newInvitation;
         bool isValidator = members.userMap(validator, Members.UserType(1));
         bool isEnterprise = members.userMap(msg.sender, Members.UserType(0));
         (bool invited, ) = isValidatorInvited(msg.sender, validator, audit);
-        require( !invited , "CohortFactory:inviteValidator - This validator has been already invited for this validation type." );
-        require( isEnterprise, "CohortFactory:inviteValidator - Only Enterprise user can invite Validators.");
-        require( isValidator, "CohortFactory:inviteValidator - Only Approved Validators can be invited.");
-        require( memberHelpers.deposits(validator) > 0,"CohortFactory:inviteValidator - This validator has not staked any tokens yet.");
+        require( !invited , "CF:inviteValidator - Validator has been already invited" );
+        require( isEnterprise, "CF:inviteValidator - Only Enterprise user can invite.");
+        require( isValidator, "CF:inviteValidator - Only Approved Validators can be invited.");
+        require( memberHelpers.deposits(validator) > 0,"CF:inviteValidator - Validator has not staked.");
+        
+        Invitation memory newInvitation;
         newInvitation.validator = validator;
         newInvitation.invitationDate = block.timestamp;     
         newInvitation.audits = AuditTypes(audit);   
         invitations[msg.sender].push(newInvitation);
        
-        emit ValidatorInvited(msg.sender, validator, AuditTypes(audit), invitations[msg.sender].length - 1);
+         emit ValidatorInvited(msg.sender, validator, AuditTypes(audit), invitations[msg.sender].length - 1);
     }
     
 
@@ -114,10 +114,10 @@ contract CohortFactory is  AccessControlEnumerableUpgradeable {
     * @param validator address of the validator to invite
     * @param audit type of the audit
     */
-    function inviteValidatorMultiple(address[] memory validator, AuditTypes audit) public{
+    function inviteValidatorMultiple(address[] memory validator, AuditTypes audit) external{
 
         uint256 length = validator.length;
-        require(length <= 256, "CohortFactory-inviteValidatorMultiple: List too long");
+        require(length <= 256, "CF-inviteValidatorMultiple: List too long");
         for (uint256 i = 0; i < length; i++) {
             inviteValidator(validator[i], uint256(audit));
         }
@@ -130,16 +130,16 @@ contract CohortFactory is  AccessControlEnumerableUpgradeable {
     */
     function acceptInvitation(address enterprise, uint256 invitationNumber) public {
 
-        require( invitations[enterprise].length > invitationNumber, "CohortFactory:acceptInvitation - This invitation doesn't exist");
-        require( invitations[enterprise][invitationNumber].acceptanceDate == 0, "CohortFactory:acceptInvitation- This invitation has been accepted already .");
-        require( invitations[enterprise][invitationNumber].validator == msg.sender, "CohortFactory:acceptInvitation - You are accepting invitation to which you were not invited or this invitation doesn't exist.");
+        require( invitations[enterprise].length > invitationNumber, "CF:acceptInvitation - Invitation doesn't exist");
+        require( invitations[enterprise][invitationNumber].acceptanceDate == 0, "CF:acceptInvitation- Accepted already .");
+        require( invitations[enterprise][invitationNumber].validator == msg.sender, "CF:acceptInvitation - You were not invited.");
         invitations[enterprise][invitationNumber].acceptanceDate = block.timestamp;
           
         emit InvitationAccepted(msg.sender, invitationNumber);
     }
 
 
-    function clearInvitationRemoveValidator(address validator, AuditTypes audit) public  returns (bool) {
+    function clearInvitationRemoveValidator(address validator, AuditTypes audit) external  returns (bool) {
 
         for (uint256 i = 0; i < invitations[msg.sender].length; i++){
             if (invitations[msg.sender][i].audits == audit && invitations[msg.sender][i].validator ==  validator){
@@ -158,7 +158,7 @@ contract CohortFactory is  AccessControlEnumerableUpgradeable {
     * @param enterprise address of the Enterprise who created invitation
     * @param invitationNumber invitation number
     */
-    function acceptInvitationMultiple(address[] memory enterprise, uint256[] memory invitationNumber) public{
+    function acceptInvitationMultiple(address[] memory enterprise, uint256[] memory invitationNumber) external{
 
         uint256 length = enterprise.length;
         for (uint256 i = 0; i < length; i++) {
@@ -216,7 +216,11 @@ contract CohortFactory is  AccessControlEnumerableUpgradeable {
     * @return true if invited
     * @return true if accepted invitation
     */
-    function isValidatorInvitedNumber(address enterprise, address validator, uint256 audits, uint256 invitNumber) public view returns (bool, bool) {
+    function isValidatorInvitedNumber(address enterprise, address validator, uint256 audits, uint256 invitNumber) external view returns (bool, bool) {
+
+        require(enterprise != address(0), "CF:isValidatorInvitedNumber - enterprise can't be 0");
+        require(validator != address(0), "CF:isValidatorInvitedNumber - validtor can't be 0");
+        require(audits <= 5, "CF:isValidatorInvitedNumber - audit not in range");
 
         if (invitations[enterprise][invitNumber].audits == AuditTypes(audits) && 
             invitations[enterprise][invitNumber].validator == validator &&
@@ -233,12 +237,12 @@ contract CohortFactory is  AccessControlEnumerableUpgradeable {
     * @param enterprise inviting party
     * @return list of boolean variables with value true for audit types enterprise has initiated cohort, 
     */
-    function returnCohorts(address enterprise) public view returns (bool[] memory){
+    function returnCohorts(address enterprise) external view returns (bool[] memory){
 
-        uint256 auditCount = 6;
+        uint8 auditCount = 6;
         bool[] memory audits = new bool[](auditCount);
 
-        for (uint256 i; i < auditCount; i++){
+        for (uint8 i; i < auditCount; i++){
             if (cohortMap[enterprise][i])
                audits[i] = true;
         }
@@ -252,12 +256,15 @@ contract CohortFactory is  AccessControlEnumerableUpgradeable {
     * @param audit type of audits
     * @return list of boolean variables with value true for audit types enterprise has initiated cohort, 
     */
-    function returnValidatorList(address enterprise, uint256 audit)public view returns(address[] memory){
+    function returnValidatorList(address enterprise, uint8 audit)public view returns(address[] memory){
+
+        require(enterprise != address(0), "CF:returnValidatorList - address can't be 0");
+        require(audit <= 5, "CF:returnValidatorList - audit not in range");
 
         address[] memory validatorsList = new address[](returnInvitationCount(enterprise, AuditTypes(audit)));
         uint k;
         for (uint i=0; i < invitations[enterprise].length; ++i ){
-            if (uint256(invitations[enterprise][i].audits) == audit && invitations[enterprise][i].acceptanceDate > 0){
+            if (uint(invitations[enterprise][i].audits) == audit && invitations[enterprise][i].acceptanceDate > 0){
                 validatorsList[k] = invitations[enterprise][i].validator;
                 k++;
             }
@@ -284,7 +291,7 @@ contract CohortFactory is  AccessControlEnumerableUpgradeable {
     * @param validator address of the validator
     * @return number of cohorts
     */ 
-    function returnValidatorCohortsCount(address validator, address enterprise) public view returns (uint256){
+    function returnValidatorCohortsCount(address validator, address enterprise) external view returns (uint256){
 
         return validatorCohortList[validator][enterprise].length;
     }
@@ -293,13 +300,15 @@ contract CohortFactory is  AccessControlEnumerableUpgradeable {
     * @dev Initiate creation of a new cohort 
     * @param audit type
     */
-    function createCohort(uint256 audit) public {
-        require(!cohortMap[msg.sender][uint256(audit)] , "CohortFactory:createCohort - This cohort already exists.");
+    function createCohort(uint8 audit) external {
+        require(!cohortMap[msg.sender][uint8(audit)] , "CF:createCohort - This cohort already exists.");
         address[] memory validators =  returnValidatorList(msg.sender, audit);
-        require(validators.length >= minValidatorPerCohort[uint256(audit)], "CohortFactory:createCohort - Number of validators below required minimum.");
-        cohortMap[msg.sender][uint256(audit)] = true;   
+        require(validators.length >= minValidatorPerCohort[uint8(audit)], "CF:createCohort - Validator num below minimum.");
+        cohortMap[msg.sender][uint8(audit)] = true;   
         createValidatorCohortList(validators, msg.sender, AuditTypes(audit));
         emit CohortCreated(msg.sender, audit);
         
     }
+
+    
 }

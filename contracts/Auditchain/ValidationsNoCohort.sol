@@ -20,10 +20,10 @@ contract ValidationsNoCohort is Validations {
     * @param url - locatoin of the file on IPFS or   function returnValidatorList(bytes32 validationHash) public view override  returns (address[] memory){
     * @param auditType - type of auditing 
     */
-    function initializeValidationNoCohort(bytes32 documentHash, string memory url, AuditTypes auditType, uint256 price) public {
+    function initializeValidationNoCohort(bytes32 documentHash, string memory url, AuditTypes auditType, uint256 price) external {
 
-        require(checkIfRequestorHasFunds(msg.sender, price), "ValidationsNoCohort:initializeValidationNoCohort - Not sufficient funds. Deposit additional funds.");
-        require(members.userMap(msg.sender, IMembers.UserType(2)), "ValidationsNoCohort:initializeValidationNoCohort - You have to register as data subscriber");
+        require(checkIfRequestorHasFunds(msg.sender, price), "VNC:initializeValidationNoCohort - Not sufficient funds. Deposit additional funds.");
+        require(members.userMap(msg.sender, IMembers.UserType(2)), "VNC:initializeValidationNoCohort - You have to register as data subscriber");
         super.initializeValidation(documentHash, url, auditType, false, price);
         
     }
@@ -47,14 +47,14 @@ contract ValidationsNoCohort is Validations {
         emit PaymentProcessed(validationHash, winner, validation.winnerVotesPlus[winner], validation.winnerVotesMinus[winner]);
     }
 
-    function validate(bytes32 documentHash, uint256 validationTime, address subscriber, ValidationStatus decision, string memory valUrl, bytes32 reportHash) public override {
-        super.validate(documentHash, validationTime, subscriber, decision, valUrl, reportHash);
-    }
+    // function validate(bytes32 documentHash, uint256 validationTime, address subscriber, ValidationStatus decision, string memory valUrl, bytes32 reportHash) public override {
+    //     super.validate(documentHash, validationTime, subscriber, decision, valUrl, reportHash);
+    // }
 
-    function returnValidatorCount(bytes32 recentValidationHash) public view override returns (uint256){
+    function returnValidatorCount(bytes32 _recentValidationHash) public view override returns (uint256){
         // return nodeOperations.returnNodeOperatorsCount();
 
-        (address[] memory nodeOperators,,,,,) = collectValidationResults(recentValidationHash);
+        (address[] memory nodeOperators,,,,,) = collectValidationResults(_recentValidationHash);
         return nodeOperators.length;
         
     }
@@ -66,7 +66,9 @@ contract ValidationsNoCohort is Validations {
     }
 
 
-       function returnValidatorListActual(bytes32 validationHash) public view returns (address[] memory){
+       function returnValidatorListActual(bytes32 validationHash) external view returns (address[] memory){
+
+        require(validationHash !=  bytes32(0), "VNC:returnValidatorListActual - invalid hash");
 
         //  (address[] memory nodeOperators,,,,,)  = collectValidationResults(validationHash);
         Validation storage validation = validations[validationHash];

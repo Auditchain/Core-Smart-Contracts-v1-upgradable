@@ -2,11 +2,8 @@
 pragma solidity =0.8.0;
 pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
-// import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
-
-import "./ICohortFactory.sol";
 import "./../IAuditToken.sol";
 
 /**
@@ -30,10 +27,8 @@ contract Members is  AccessControlEnumerableUpgradeable {
     bytes32 public constant SETTER_ROLE =  keccak256("SETTER_ROLE");
 
     IAuditToken public auditToken;                       //AUDT token 
-    ICohortFactory public cohortFactory;
-    uint256 public stakedAmount;                        //total number of staked tokens   
     mapping(address => uint256) public deposits;        //track deposits per user
-    mapping(address => DataSubscriberTypes[]) public dataSubscriberCohorts;
+    // mapping(address => DataSubscriberTypes[]) public dataSubscriberCohorts;
     mapping(address => mapping(address => bool)) public dataSubscriberCohortMap;
     uint256 public amountTokensPerValidation ;    //New minted amount per validation
 
@@ -73,7 +68,7 @@ contract Members is  AccessControlEnumerableUpgradeable {
         _;
     }
 
-    function initialize(address _auditToken, address _platformAddress ) initializer public {
+    function initialize(address _auditToken, address _platformAddress ) initializer external {
 
 
         require(_auditToken != address(0), "Members:constructor - Audit token address can't be 0");
@@ -97,7 +92,7 @@ contract Members is  AccessControlEnumerableUpgradeable {
      * @dev to be called by governance to update new amount for required quorum
      * @param _requiredQuorum new value of required quorum
      */
-    function updateQuorum(uint256 _requiredQuorum) public isSetter() {
+    function updateQuorum(uint256 _requiredQuorum) external isSetter() {
         require(_requiredQuorum != 0, "Members:updateQuorum - New quorum value can't be 0");
         requiredQuorum = _requiredQuorum;
         LogGovernanceUpdate(_requiredQuorum, "updateQuorum");
@@ -108,7 +103,7 @@ contract Members is  AccessControlEnumerableUpgradeable {
     * @dev to be called by Governance contract to update new value for the validation platform fee
     * @param _newFee new value for data subscriber access fee
     */
-    function updatePlatformShareValidation(uint256 _newFee) public isSetter() {
+    function updatePlatformShareValidation(uint256 _newFee) external isSetter() {
 
         require(_newFee != 0, "Members:updatePlatformShareValidation - New value for the platform fee can't be 0");
         platformShareValidation = _newFee;
@@ -119,7 +114,7 @@ contract Members is  AccessControlEnumerableUpgradeable {
     * @dev to be called by Governance contract to update new value for data sub access fee
     * @param _accessFee new value for data subscriber access fee
     */
-    function updateAccessFee(uint256 _accessFee) public isSetter() {
+    function updateAccessFee(uint256 _accessFee) external isSetter() {
 
         require(_accessFee != 0, "Members:updateAccessFee - New value for the access fee can't be 0");
         accessFee = _accessFee;
@@ -130,7 +125,7 @@ contract Members is  AccessControlEnumerableUpgradeable {
     * @dev to be called by Governance contract to update new amount for validation rewards
     * @param _minDepositDays new value for minimum of days to calculate 
     */
-    function updateMinDepositDays(uint256 _minDepositDays) public isSetter() {
+    function updateMinDepositDays(uint256 _minDepositDays) external isSetter() {
 
         require(_minDepositDays != 0, "Members:updateMinDepositDays - New value for the min deposit days can't be 0");
         minDepositDays = _minDepositDays;
@@ -141,7 +136,7 @@ contract Members is  AccessControlEnumerableUpgradeable {
     * @dev to be called by Governance contract to update new amount for validation rewards
     * @param _amountTokensPerValidation new value of reward per validation
     */
-    function updateTokensPerValidation(uint256 _amountTokensPerValidation) public isSetter() {
+    function updateTokensPerValidation(uint256 _amountTokensPerValidation) external isSetter() {
 
         require(_amountTokensPerValidation != 0, "Members:updateTokensPerValidation - New value for the reward can't be 0");
         amountTokensPerValidation = _amountTokensPerValidation;
@@ -153,7 +148,7 @@ contract Members is  AccessControlEnumerableUpgradeable {
     * @dev to be called by Governance contract
     * @param _enterpriseMatch new value of enterprise portion of enterprise value of validation cost
     */
-    function updateEnterpriseMatch(uint256 _enterpriseMatch) public isSetter()  {
+    function updateEnterpriseMatch(uint256 _enterpriseMatch) external isSetter()  {
 
         require(_enterpriseMatch != 0, "Members:updateEnterpriseMatch - New value for the enterprise match can't be 0");
         enterpriseMatch = _enterpriseMatch;
@@ -167,7 +162,7 @@ contract Members is  AccessControlEnumerableUpgradeable {
     * @param _enterpriseShareSubscriber  - share of the enterprise
     * @param _validatorShareSubscriber - share of the subscribers
     */
-    function updateDataSubscriberShares(uint256 _enterpriseShareSubscriber, uint256 _validatorShareSubscriber ) public isSetter()  {
+    function updateDataSubscriberShares(uint256 _enterpriseShareSubscriber, uint256 _validatorShareSubscriber ) external isSetter()  {
 
         // platform share should be at least 10%
         require(_enterpriseShareSubscriber.add(validatorShareSubscriber) <=90, "Enterprise and Validator shares can't be larger than 90");
@@ -183,7 +178,7 @@ contract Members is  AccessControlEnumerableUpgradeable {
     * @param name name of the user
     * @param userType  type of the user, enterprise, validator or data subscriber
     */
-    function addUser(address newUser, string memory name, UserType userType) public isController() {
+    function addUser(address newUser, string memory name, UserType userType) external isController() {
 
         require(!userMap[newUser][userType], "Members:addUser - This user already exist.");
         user[newUser][userType] = name;
@@ -199,7 +194,7 @@ contract Members is  AccessControlEnumerableUpgradeable {
         emit UserAdded(newUser, name, userType);
     }
 
-    function returnValidatorList() public view returns(address[] memory) {
+    function returnValidators() external view returns(address[] memory) {
 
         return validators;
     }

@@ -14,21 +14,21 @@ contract ValidationHelpers {
     using SafeMathUpgradeable for uint256;
 
     // Validation can be approved or disapproved. Initial status is undefined.
-    enum ValidationStatus {Undefined, Yes, No}   
-    MemberHelpers memberHelpers;
+    enum ValidationStatus {Undefined, Yes, No}  
+    MemberHelpers public memberHelpers;
     IQueue public queue;
 
 
     event ReplaceCancelValidation(address indexed user, bytes32 validationHash, uint256 price);
 
 
-    function initialize(address _memberHelpers, address _queue) public  {
+    function initialize(address _memberHelpers, address _queue) external  {
         memberHelpers = MemberHelpers(_memberHelpers);
         queue = IQueue(_queue);
     }
 
 
-    function isHashAndTimeCorrect( bytes32 documentHash, uint256 _validationTime) public  view returns (bool){
+    function isHashAndTimeCorrect( bytes32 documentHash, uint256 _validationTime) external  view returns (bool){
 
 
         bytes32 validationHash = keccak256(abi.encodePacked(documentHash, _validationTime));
@@ -41,9 +41,12 @@ contract ValidationHelpers {
     }
 
 
-    function returnWinnerStruct(bytes32 validationHash, address contractAddress)public view returns (string memory valUrl, address winner, uint256 validationTime){
+    function returnWinnerStruct(bytes32 validationHash, address contractAddress)external view returns (string memory valUrl, address winner, uint256 validationTime){
 
-        
+        require(validationHash != bytes32(0), "VH:returnWinnerStruct - hash can't be 0");
+        require(contractAddress != address(0), "VH:returnWinnerStruct - address can't be 0");
+
+
         (,,validationTime,,,,,,,winner) = IValidations(contractAddress).returnValidationRecord(validationHash);
         valUrl = IValidations(contractAddress).returnValidationUrl(validationHash, winner);
 
@@ -57,22 +60,22 @@ contract ValidationHelpers {
      * @param price - new price, if price is 0 only remove request
      * @param validationHash validation hash for request
      */
-    function replaceCancelValidation(uint256 price, bytes32 validationHash, address contractAddress) public {
-        require(validationHash != bytes32(0), "Val:replaceValidation-  Validation Hash can't be 0");
+    function replaceCancelValidation(uint256 price, bytes32 validationHash, address contractAddress) external {
+        require(validationHash != bytes32(0), "VH:replaceValidation-  Validation Hash can't be 0");
 
         (,address requestor,,,,,,,,) = IValidations(contractAddress).returnValidationRecord(validationHash);
 
-        // Validation storage val = validations[validationHash];
-        require(msg.sender == requestor , "Val:replaceValidation - not yours");
+        // Validation storage VH = validations[validationHash];
+        require(msg.sender == requestor , "VH:replaceValidation - not yours");
         if (price == 0)
-            queue.removeFromQueue(validationHash);
+            assert(queue.removeFromQueue(validationHash));
         else
             queue.replaceValidation(price, validationHash);
             
         emit ReplaceCancelValidation(msg.sender, validationHash, price);
     }
 
-    function selectWinner(bytes32 validationHash, address[] memory winners) public view returns (address) {
+    function selectWinner(bytes32 validationHash, address[] memory winners) external view returns (address) {
 
         address winner = winners[0];
 
@@ -88,7 +91,7 @@ contract ValidationHelpers {
     }
 
 
-     function determineWinners(bytes32 validationHash) public  view returns (address[] memory, uint256){
+     function determineWinners(bytes32 validationHash) external  view returns (address[] memory, uint256){
 
         (address[] memory validator, uint256[] memory status, uint256[] memory validationTimes) = insertionSort (validationHash);
 
@@ -183,7 +186,7 @@ contract ValidationHelpers {
      * @param validationHash - consist of hash of hashed document and timestamp
      * @return number representing current participation level in percentage
      */
-    function calculateVoteQuorum(bytes32 validationHash, address validationContract)public view returns (uint256)
+    function calculateVoteQuorum(bytes32 validationHash, address validationContract)external view returns (uint256)
     {
 
 
@@ -191,7 +194,7 @@ contract ValidationHelpers {
         uint256 currentlyVoted;
 
         address[] memory validatorsList = IValidations(validationContract).returnValidatorList(validationHash);
-        require(validatorsList.length > 0, "ValidationHelpers:calculateVoteQuorum - There is no validators or hash was incorrect");
+        // require(validatorsList.length > 0, "ValidationHelpers:calculateVoteQuorum - There is no validators or hash was incorrect");
         (address[] memory validatorListActive, ,uint256[] memory choice,,,) =  IValidations(validationContract).collectValidationResults(validationHash);
 
         for (uint256 i = 0; i < validatorsList.length; i++) {

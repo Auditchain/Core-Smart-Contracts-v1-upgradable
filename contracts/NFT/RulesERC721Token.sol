@@ -15,7 +15,7 @@ import "../Auditchain/ValidationsNoCohort.sol";
 contract RulesERC721Token is ERC721Upgradeable,  ERC721URIStorageUpgradeable, ERC721EnumerableUpgradeable
 {
     using SafeMathUpgradeable for uint256;
-    ValidationsNoCohort validation;
+    ValidationsNoCohort public validation;
 
     mapping(bytes32 => bool) public NFTCompleted;
     event Mint(uint256 tokenId, address recipient);

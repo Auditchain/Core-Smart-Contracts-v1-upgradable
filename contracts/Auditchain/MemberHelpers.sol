@@ -4,6 +4,8 @@ import "./Members.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+
 import "./../IAuditToken.sol";
 import "./IValidations.sol";
 
@@ -11,14 +13,14 @@ import "./IValidations.sol";
  * @title MemberHelpers
  * Additional function for Members
  */
-contract MemberHelpers is AccessControlEnumerableUpgradeable {
+contract MemberHelpers is AccessControlEnumerableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeMathUpgradeable for uint256;
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
         bytes32 public constant CONTROLLER_ROLE = keccak256("CONTROLLER_ROLE");
 
     address public auditToken; //AUDT token
-    Members members; // Members contract
+    Members public members; // Members contract
     IValidations public validations; // Validation interface
     mapping(address => uint256) public deposits; //track deposits per user
     uint256 public minContribution;
@@ -31,7 +33,7 @@ contract MemberHelpers is AccessControlEnumerableUpgradeable {
     event LogIncreaseDeposit(address user, uint256 amount);
     event LogDecreaseDeposit(address user, uint256 amount);
 
-    function initialize(address _members, address _auditToken) public {
+    function initialize(address _members, address _auditToken) external {
         require(_members != address(0),"MemberHelpers:constructor - Member address can't be 0");
         require(_auditToken != address(0), "MemberHelpers:setCohort - Cohort address can't be 0");
         minContribution = 5e21;
@@ -59,44 +61,46 @@ contract MemberHelpers is AccessControlEnumerableUpgradeable {
         _;
     }
 
-    function returnDepositAmount(address user) public view returns (uint256) {
+    function returnDepositAmount(address user) external view returns (uint256) {
         return deposits[user];
     }
 
    
 
-    function increaseDeposit(address user, uint256 amount) public isController("increaseDeposit") {
+    function increaseDeposit(address user, uint256 amount) external isController("increaseDeposit") returns(bool){
         deposits[user] = deposits[user].add(amount);
         emit LogIncreaseDeposit(user, amount);
+        return true;
     }
 
-    function decreaseDeposit(address user, uint256 amount) public isController("decreaseDepoist") {
+    function decreaseDeposit(address user, uint256 amount) external isController("decreaseDepoist") returns (bool){
         deposits[user] = deposits[user].sub(amount);
         emit LogDecreaseDeposit(user, amount);
+        return true;
     }
 
     /**
      * @dev Function to accept contribution to staking
      * @param amount number of AUDT tokens sent to contract for staking
      */
-    function stake(uint256 amount) public {
-        require(amount > 0, "MemberHelpers:stake - Amount can't be 0");
+    function stake(uint256 amount) external nonReentrant {
+        require(amount > 0, "MH:stake - Amount can't be 0");
 
         if (members.userMap(msg.sender, Members.UserType(1))) {
             require(
                 amount + deposits[msg.sender] >= minContribution,
-                "MemberHelpers:stake - Minimum contribution amount is 5000 AUDT tokens"
+                "MH:stake - Minimum contribution amount is 5000 AUDT"
             );
             require(
                 amount + deposits[msg.sender] <= maxContribution,
-                "MemberHelpers:stake - Maximum contribution amount is 25000 AUDT tokens"
+                "MH:stake - Maximum contribution amount is 25000 AUDT"
             );
         }
         require(
             members.userMap(msg.sender, Members.UserType(0)) ||
                 members.userMap(msg.sender, Members.UserType(1)) ||
                 members.userMap(msg.sender, Members.UserType(2)),
-            "Staking:stake - User has been not registered as a validator or enterprise."
+            "MH:stake - User is not validator or enterprise."
         );
         IERC20Upgradeable(auditToken).safeTransferFrom(msg.sender, address(this), amount);
         deposits[msg.sender] = deposits[msg.sender].add(amount);
@@ -108,7 +112,7 @@ contract MemberHelpers is AccessControlEnumerableUpgradeable {
      * @dev Function to redeem contribution.
      * @param amount number of tokens being redeemed
      */
-    function redeem(uint256 amount) public {
+    function redeem(uint256 amount) external nonReentrant {
         if (members.userMap(msg.sender, Members.UserType(0))) {
             uint256 outstandingVal = validations.outstandingValidations(msg.sender);
 
@@ -122,7 +126,7 @@ contract MemberHelpers is AccessControlEnumerableUpgradeable {
                             .mul(outstandingVal)
                             .div(1e4)
                     ) >= amount,
-                    "MemberHelpers:redeem - Your deposit will be too low to fullfil your outstanding payments."
+                    "MH:redeem - Your deposit will be too low."
                 );
         }
 
@@ -136,8 +140,8 @@ contract MemberHelpers is AccessControlEnumerableUpgradeable {
      * @dev to be called by administrator to set Validation address
      * @param _validations validation contract address
      */
-    function setValidation(address _validations) public isController("setValidation") {
-        require( _validations != address(0), "MemberHelpers:setValidation - Validation address can't be 0");
+    function setValidation(address _validations) external isController("setValidation") {
+        require( _validations != address(0), "MH:setValidation - Validation address can't be 0");
         validations = IValidations(_validations);
     }
 

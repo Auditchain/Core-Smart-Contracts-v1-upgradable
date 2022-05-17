@@ -40,8 +40,9 @@ contract Queue is AccessControlEnumerableUpgradeable{
     //     _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
     // }
 
+    bytes32 public constant CONTROLLER_ROLE = keccak256("CONTROLLER_ROLE");
 
-    function initialize() initializer public {
+    function initialize() initializer external {
 
         head = 0;
         idCounter = 1;
@@ -49,7 +50,6 @@ contract Queue is AccessControlEnumerableUpgradeable{
     }
 
 
-    bytes32 public constant CONTROLLER_ROLE = keccak256("CONTROLLER_ROLE");
 
     /// @dev check if caller is a controller     
     modifier isController {
@@ -111,7 +111,7 @@ contract Queue is AccessControlEnumerableUpgradeable{
      * @dev Return the id of the first Object matching `_price` in the data field.
      */
     function findIdForData(uint256 _price)
-        public
+        external
         virtual
         view
         returns (uint256)
@@ -273,17 +273,18 @@ contract Queue is AccessControlEnumerableUpgradeable{
     }
 
 
-    function addToQueue(uint256 _price, bytes32 _validationHash) public isController() {
+    function addToQueue(uint256 _price, bytes32 _validationHash) public isController() returns(bool){
         
 
        uint256 id = findIdForLesserPrice(_price);
        insertBefore(id, _price, _validationHash);
        queueCount++;
+       return true;
 
     }
 
 
-    function getValidationToVote(bytes32 _lastValidationHash) public view returns (bytes32) {
+    function getValidationToVote(bytes32 _lastValidationHash) external view returns (bytes32) {
 
         uint256 id = findIdForValidationHash(_lastValidationHash);
         (,uint256 prevId,,,) = get(id);
@@ -300,7 +301,7 @@ contract Queue is AccessControlEnumerableUpgradeable{
     }
 
 
-    function getNextValidationToVote() public view returns(bytes32 validationHash) {
+    function getNextValidationToVote() external view returns(bytes32 validationHash) {
 
         if (objects[head].executed){
                 (,,,validationHash,) =   get(head);
@@ -309,7 +310,7 @@ contract Queue is AccessControlEnumerableUpgradeable{
         return validationHash;
     }
 
-    function getValidationToProcess(bytes32 _lastValidationHash) public view returns(bytes32 validationHash) {
+    function getValidationToProcess(bytes32 _lastValidationHash) external view returns(bytes32 validationHash) {
 
 
         uint256 id = findIdForValidationHash(_lastValidationHash);
@@ -323,7 +324,7 @@ contract Queue is AccessControlEnumerableUpgradeable{
         }
     }
 
-    function getNextValidation() public view returns(bytes32) {
+    function getNextValidation() external view returns(bytes32) {
 
         (,,,bytes32 validationHash,) = get(head);
         return validationHash;
@@ -331,25 +332,28 @@ contract Queue is AccessControlEnumerableUpgradeable{
 
 
 
-    function removeFromQueue(bytes32 _valHash) public isController() {
+    function removeFromQueue(bytes32 _valHash) public isController() returns (bool){
         uint256 id = findIdForValidationHash(_valHash);
         remove(id);
+        return true;
        
     }
 
-    function setValidatedFlag(bytes32 _valHash) public isController() {
+    function setValidatedFlag(bytes32 _valHash) external isController() returns (bool) {
 
         uint256 id = findIdForValidationHash(_valHash);
         objects[id].executed = true;
+        return true;
     }
 
-    function returnQueueSize() public view returns(uint256) {
+    function returnQueueSize() external view returns(uint256) {
         return queueCount;
     }
 
-    function replaceValidation(uint256 newPrice, bytes32 _valHash) public isController(){
+    function replaceValidation(uint256 newPrice, bytes32 _valHash) external isController() returns (bool){
         removeFromQueue(_valHash);
         addToQueue(newPrice, _valHash); 
+        return true;
     }
 
 
