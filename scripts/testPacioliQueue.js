@@ -147,6 +147,7 @@ async function deploy() {
 
         // if no report given as command argument, round-robbin of the above
         let reportURL = myArgs[0] ? myArgs[0] : reports[run%reports.length];
+        run++;
         let result 
 
         await setUpContracts("0x9ca184fa913e7ca5f49b0c89a2665beac582c12cce4308473ef65f4166d58dfa");
@@ -157,7 +158,6 @@ async function deploy() {
         let testHash = web3.utils.keccak256(reportURL + randomNum);
         console.log("Hash from deploy:", testHash);
         await validation.methods.initializeValidationNoCohort(testHash, result[1], 1, "1000000000000000000").send({ from: dataSubscriber1, gas: 900000 });
-        run++;
         console.log("[" + run + "] Run completed");
         if (run>=MAX_RUNS)
             process.exit(0);
