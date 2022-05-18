@@ -289,7 +289,7 @@ async function validate(documentHash, initTime, choice, trxHash, valUrl, reportH
     // if (mutex) {
     // mutex = false;
     const nonce = await web3.eth.getTransactionCount(owner);
-    // console.log("Nonce value from validate:", nonce);
+    //console.log("Nonce value from validate:", nonce);
 
     try {
 
@@ -468,7 +468,7 @@ async function checkValQueue(vHash) {
 
                         const validationInitialized = await nonCohortValidate.getPastEvents("ValidationInitialized", {
                             filter: { validationHash: validationHash },
-                            fromBlock: 0,
+                            fromBlock: blockNumber,
                             toBlock: "latest",
                         });
 
@@ -567,7 +567,7 @@ async function checkVoteQueue(vHash) {
 
                     const requestExecuted = await nonCohortValidate.getPastEvents("RequestExecuted", {
                         filter: { validationHash: validationHash },
-                        fromBlock: 0,
+                        fromBlock: blockNumber,
                         toBlock: "latest",
                     });
 
